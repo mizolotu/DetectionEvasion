@@ -24,7 +24,7 @@ def extract_values(data_file):
         idx = np.where(v[:, 1] == 'Protocol')[0]
     values = np.hstack([v[:, 1:2].astype(float), v[:, 3:-1].astype(float)])
     print(values.shape, getsizeof(values))
-    labels = p.values[:, -1]
+    labels = v[:, -1]
     return values, labels
 
 def one_hot_encode(values, categories):
@@ -40,14 +40,14 @@ if __name__ == '__main__':
 
     # task
 
-    task = sys.argv[1]
+    tasks = sys.argv[1:]
 
     # find data files
 
     data_dir = 'data/cicids2018'
     data_files = find_data_files(data_dir)
     stats_file = 'stats.pkl'
-    dataset_file = 'data.pkl'
+    dataset_file = 'data{0}.pkl'
 
     # lists for categorical features and labels
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     # collect stats
 
-    if task == 'stats':
+    if 'stats' in tasks:
         stats = []
         pp = []
         labels = []
@@ -108,7 +108,7 @@ if __name__ == '__main__':
                 pickle.dump(uprotos, f)
                 pickle.dump((N, X_min, X_max, X_mean, X_std), f)
 
-    elif task == 'dataset':
+    if 'dataset' in tasks:
 
         # load stats
 
@@ -134,7 +134,15 @@ if __name__ == '__main__':
 
         x = np.vstack(x)
         y = np.vstack(y)
-        print(x.shape, y.shape)
-        with open(osp.join(data_dir, dataset_file), 'wb') as f:
-            pickle.dump((x, y), f)
+        xy = np.hstack([x, y])
+        nfiles = 4
+        idx = np.arange(0, xy.shape[0], xy.shape[0] // nfiles)
+        for i in range(nfiles):
+            fname = osp.join(data_dir, dataset_file.format(i))
+            if i < nfiles - 1:
+                idx_i = np.arange(idx[i], idx[i+1])
+            else:
+                idx_i = np.arange(idx[i], xy.shape[0])
+            with open(fname, 'wb') as f:
+                pickle.dump(xy[idx_i, :], f)
 
