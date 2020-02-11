@@ -12,7 +12,7 @@ def find_data_files(dir):
             data_files.append(fp)
     return data_files
 
-def extract_values(data_file):
+def extract_values(data_file, minus_ids=[67, 68]):
     p = pandas.read_csv(data_file, delimiter=',', skiprows=1)
     v = p.values
     if '20-02-2018' in data_file:
@@ -22,6 +22,8 @@ def extract_values(data_file):
         v = np.delete(v, idx[0], 0)
         print('Row {0} has been deleted'.format(idx[0]))
         idx = np.where(v[:, 1] == 'Protocol')[0]
+    for mi in minus_ids:
+        v[np.where(v[:, mi] == -1)[0], mi] = 0
     values = np.hstack([v[:, 1:2].astype(float), v[:, 3:-1].astype(float)])
     print(values.shape, getsizeof(values))
     labels = v[:, -1]
@@ -117,6 +119,12 @@ if __name__ == '__main__':
             protos = pickle.load(f)
             N, X_min, X_max, X_mean, X_std = pickle.load(f)
 
+        # filter features
+
+        eps = 1e10
+        idx = np.where((X_min > -eps) & (X_max < eps))[0]
+        print(len(idx), [i for i in np.arange(len(X_max)) if i not in idx])
+
         # extract data
 
         x = []
@@ -126,7 +134,7 @@ if __name__ == '__main__':
             v, l = extract_values(data_file)
             x.append(np.hstack([
                 one_hot_encode(v[:, 0], protos),
-                (v[:, 1:] - np.ones((len(v), 1)).dot(X_mean.reshape(1,-1))) / (1e-10 + np.ones((len(v), 1)).dot(X_std.reshape(1,-1)))
+                (v[:, 1 + idx] - np.ones((len(v), 1)).dot(X_mean[idx].reshape(1, -1))) / (1e-10 + np.ones((len(v), 1)).dot(X_std[idx].reshape(1, -1)))
             ]))
             y.append(one_hot_encode(l, labels))
 
