@@ -3,7 +3,6 @@ import os.path as osp
 import numpy as np
 
 from sys import getsizeof
-from sklearn.preprocessing import OneHotEncoder as ohe
 
 def find_data_files(dir):
     data_files = []
