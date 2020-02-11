@@ -38,9 +38,10 @@ def one_hot_encode(values, categories):
 
 if __name__ == '__main__':
 
-    # task
+    # args
 
-    tasks = sys.argv[1:]
+    n_data_files = int(sys.argv[1])
+    tasks = sys.argv[2:]
 
     # find data files
 
@@ -68,7 +69,7 @@ if __name__ == '__main__':
         stats = []
         pp = []
         labels = []
-        for data_file in data_files[0:]:
+        for data_file in data_files[0:n_data_files]:
             print(data_file)
             values, labels = extract_values(data_file)
             for label in np.unique(labels):
@@ -77,7 +78,6 @@ if __name__ == '__main__':
             for proto in np.unique(values[:, 0]):
                 if proto not in uprotos:
                     uprotos.append(proto)
-            print(ulabels, uprotos)
             x_min = np.min(values[:, 1:], axis=0)
             x_max = np.max(values[:, 1:], axis=0)
             x_mean = np.mean(values[:, 1:], axis=0)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
                 mu = (N * X_mean + n * x_mean) / (N + n)
                 D = X_mean - mu
                 d = x_mean - mu
-                X_std = np.sqrt(N * (D**2 + X_std**2) + n * (d**2 + x_std**2)) / (N + n)
+                X_std = np.sqrt((N * (D**2 + X_std**2) + n * (d**2 + x_std**2)) / (N + n))
                 N = N + n
                 X_mean = mu
             print(N, X_min[0:4], X_max[0:4], X_mean[0:4], X_std[0:4])
@@ -121,7 +121,7 @@ if __name__ == '__main__':
 
         x = []
         y = []
-        for data_file in data_files[0:]:
+        for data_file in data_files[0:n_data_files]:
             print(data_file)
             v, l = extract_values(data_file)
             x.append(np.hstack([
