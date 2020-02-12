@@ -74,6 +74,7 @@ if __name__ == '__main__':
         for data_file in data_files[0:n_data_files]:
             print(data_file)
             values, labels = extract_values(data_file)
+            print(np.unique(labels))
             for label in np.unique(labels):
                 if label not in ulabels:
                     ulabels.append(label)
