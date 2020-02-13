@@ -23,7 +23,7 @@ def extract_values(data_file, minus_ids=[67, 68]):
     idx = np.where(v[:, 1] == 'Protocol')[0]
     if len(idx) > 0:
         v = np.delete(v, idx, 0)
-        print('Rows {0} have been deleted'.format(idx))
+        print('{0} rows have been deleted'.format(len(idx)))
 
     # substitute minus ones with zeroes in columns minus_ids
 
@@ -148,18 +148,16 @@ if __name__ == '__main__':
                 N = N + n
                 X_mean = mu
             with open(osp.join(data_dir, stats_file), 'wb') as f:
-                pickle.dump(ulabels, f)
-                pickle.dump(uprotos, f)
-                pickle.dump((N, X_min, X_max, X_mean, X_std), f)
+                pickle.dump(
+                    (ulabels, uprotos, N, X_min, X_max, X_mean, X_std), f
+                )
 
     if 'dataset' in tasks:
 
         # load stats
 
         with open(osp.join(data_dir, stats_file), 'rb') as f:
-            labels = pickle.load(f)
-            protos = pickle.load(f)
-            N, X_min, X_max, X_mean, X_std = pickle.load(f)
+            labels, protos, N, X_min, X_max, X_mean, X_std = pickle.load(f)
 
         # extract data
 
@@ -179,6 +177,7 @@ if __name__ == '__main__':
         x = np.vstack(x)
         y = np.vstack(y)
         xy = np.hstack([x, y])
+        print('Dataset shape: {0}, size on disk: {1}'.format(xy.shape, getsizeof(xy)))
         nfiles = 4
         idx = np.arange(0, xy.shape[0], xy.shape[0] // nfiles)
         for i in range(nfiles):
@@ -189,4 +188,3 @@ if __name__ == '__main__':
                 idx_i = np.arange(idx[i], xy.shape[0])
             with open(fname, 'wb') as f:
                 pickle.dump(xy[idx_i, :], f)
-
