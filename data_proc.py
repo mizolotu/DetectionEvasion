@@ -17,16 +17,35 @@ def extract_values(data_file, minus_ids=[67, 68]):
     v = p.values
     if '20-02-2018' in data_file:
         v = v[:, 4:]
+
+    # remove header line in the middle of the data
+
     idx = np.where(v[:, 1] == 'Protocol')[0]
-    while len(idx) > 0:
-        v = np.delete(v, idx[0], 0)
-        print('Row {0} has been deleted'.format(idx[0]))
-        idx = np.where(v[:, 1] == 'Protocol')[0]
+    if len(idx) > 0:
+        v = np.delete(v, idx, 0)
+        print('Rows {0} have been deleted'.format(idx))
+
+    # substitute minus ones with zeroes
+
     for mi in minus_ids:
         v[np.where(v[:, mi] == -1)[0], mi] = 0
+
+    # stack values
+
     values = np.hstack([v[:, 1:2].astype(float), v[:, 3:-1].astype(float)])
-    print(values.shape, getsizeof(values))
     labels = v[:, -1]
+
+    # remove lines with nan and inf
+
+    finites = np.all(np.isfinite(values), axis=1)
+    idx = np.where(finites == False)[0]
+    if len(idx) > 0:
+        print('{0} non-finite values found'.format(len(idx)))
+        values = np.delete(values, idx, 0)
+        labels = np.delete(labels, idx)
+
+    print(values.shape, labels.shape, getsizeof(values))
+
     return values, labels
 
 def one_hot_encode(values, categories):
