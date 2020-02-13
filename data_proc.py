@@ -83,7 +83,9 @@ if __name__ == '__main__':
     # lists for categorical features and labels
 
     uprotos = []
+    nprotos = []
     ulabels = []
+    nlabels = []
 
     # min, max, mean and std
 
@@ -102,13 +104,25 @@ if __name__ == '__main__':
         for data_file in data_files[0:n_data_files]:
             print(data_file)
             values, labels = extract_values(data_file)
-            print(np.unique(labels))
             for label in np.unique(labels):
+                nl = len(np.where(labels == label)[0])
                 if label not in ulabels:
                     ulabels.append(label)
+                    nlabels.append(nl)
+                else:
+                    nlabels[ulabels.index(label)] += nl
             for proto in np.unique(values[:, 0]):
+                npr = len(np.where(values[:, 0] == proto)[0])
                 if proto not in uprotos:
                     uprotos.append(proto)
+                    nprotos.append(npr)
+                else:
+                    nprotos[uprotos.index(proto)] += npr
+            for l,nl in zip(ulabels, nlabels):
+                print(l ,nl)
+            for p,npr in zip(uprotos, nprotos):
+                print(p ,npr)
+
             x_min = np.min(values[:, 1:], axis=0)
             x_max = np.max(values[:, 1:], axis=0)
             x_mean = np.mean(values[:, 1:], axis=0)
@@ -156,7 +170,7 @@ if __name__ == '__main__':
             v, l = extract_values(data_file)
             x.append(np.hstack([
                 one_hot_encode(v[:, 0], protos),
-                (v[:, 1 + idx] - np.ones((len(v), 1)).dot(X_mean[idx].reshape(1, -1))) / (1e-10 + np.ones((len(v), 1)).dot(X_std[idx].reshape(1, -1)))
+                (v[:, 1:] - np.ones((len(v), 1)).dot(X_mean.reshape(1, -1))) / (1e-10 + np.ones((len(v), 1)).dot(X_std.reshape(1, -1)))
             ]))
             y.append(one_hot_encode(l, labels))
 
