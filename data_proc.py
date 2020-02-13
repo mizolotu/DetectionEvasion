@@ -25,7 +25,7 @@ def extract_values(data_file, minus_ids=[67, 68]):
         v = np.delete(v, idx, 0)
         print('Rows {0} have been deleted'.format(idx))
 
-    # substitute minus ones with zeroes
+    # substitute minus ones with zeroes in columns minus_ids
 
     for mi in minus_ids:
         v[np.where(v[:, mi] == -1)[0], mi] = 0
@@ -40,7 +40,16 @@ def extract_values(data_file, minus_ids=[67, 68]):
     finites = np.all(np.isfinite(values), axis=1)
     idx = np.where(finites == False)[0]
     if len(idx) > 0:
-        print('{0} non-finite values found'.format(len(idx)))
+        print('{0} non-finite rows found'.format(len(idx)))
+        values = np.delete(values, idx, 0)
+        labels = np.delete(labels, idx)
+
+    # remove lines with negative values
+
+    negatives = np.all(values >= 0, axis=1)
+    idx = np.where(negatives == False)[0]
+    if len(idx) > 0:
+        print('{0} non-positive rows found'.format(len(idx)))
         values = np.delete(values, idx, 0)
         labels = np.delete(labels, idx)
 
@@ -124,7 +133,6 @@ if __name__ == '__main__':
                 X_std = np.sqrt((N * (D**2 + X_std**2) + n * (d**2 + x_std**2)) / (N + n))
                 N = N + n
                 X_mean = mu
-            print(N, X_min[0:4], X_max[0:4], X_mean[0:4], X_std[0:4])
             with open(osp.join(data_dir, stats_file), 'wb') as f:
                 pickle.dump(ulabels, f)
                 pickle.dump(uprotos, f)
@@ -138,12 +146,6 @@ if __name__ == '__main__':
             labels = pickle.load(f)
             protos = pickle.load(f)
             N, X_min, X_max, X_mean, X_std = pickle.load(f)
-
-        # filter features
-
-        eps = 1e10
-        idx = np.where((X_min > -eps) & (X_max < eps))[0]
-        print(len(idx), [i for i in np.arange(len(X_max)) if i not in idx])
 
         # extract data
 
