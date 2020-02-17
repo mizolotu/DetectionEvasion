@@ -9,8 +9,8 @@ def create_model(nfeatures, nlayers, nhidden, ncategories):
     for _ in range(nlayers):
         model.add(tf.keras.layers.Dense(nhidden, activation='relu'))
         model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(ncategories, activation='softmax'))
-    model.compile(loss='categorical_crossentropy', metrics=['accuracy'])
+    model.add(tf.keras.layers.Dense(ncategories))
+    model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer='adam', metrics=['accuracy'])
     return model
 
 if __name__ == '__main__':
@@ -31,11 +31,12 @@ if __name__ == '__main__':
             lidx = ulabels.index(labels[i])
             idx = np.where(data[:, nfeatures + lidx]==1)[0]
             X.append(data[idx[:nsamples[i]], :nfeatures])
-            y = np.zeros((len(idx[:nsamples[i]]), len(labels)))
-            y[:, i] = 1
+            #y = np.zeros((len(idx[:nsamples[i]]), len(labels)))
+            #y[:, i] = 1
+            y = np.ones(len(idx[:nsamples[i]])) * lidx
             Y.append(y)
     X = np.vstack(X)
-    Y = np.vstack(Y)
+    Y = np.hstack(Y)
     print(X.shape, Y.shape, np.sum(Y, axis=0))
 
     # test models
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     n_layers = [2]
     n_hidden = [1024]
     validation_split = 0.2
-    batch_size = 512
+    batch_size = 4096
     epochs=10000
     for nl in n_layers:
         for nh in n_hidden:
