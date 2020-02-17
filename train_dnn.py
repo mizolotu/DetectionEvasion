@@ -38,6 +38,8 @@ if __name__ == '__main__':
     X = np.vstack(X)
     Y = np.hstack(Y)
     print(X.shape, Y.shape, np.sum(Y, axis=0))
+    print(np.min(X, axis=0))
+    print(np.max(X, axis=0))
 
     # test models
 
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     n_layers = [2]
     n_hidden = [1024]
     validation_split = 0.2
-    batch_size = 4096
+    batch_size = 65536
     epochs=10000
     for nl in n_layers:
         for nh in n_hidden:
