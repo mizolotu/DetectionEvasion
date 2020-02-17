@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # select data
 
     labels = ulabels # ['Benign', 'Brute Force -Web']
-    nsamples = [1000, 100]
+    nsamples = [10000 for _ in labels]
     X, Y = [], []
     for i in range(len(labels)):
         if labels[i] in ulabels:
