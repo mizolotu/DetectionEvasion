@@ -31,7 +31,7 @@ if __name__ == '__main__':
             lidx = ulabels.index(labels[i])
             idx = np.where(data[:, nfeatures + lidx]==1)[0]
             X.append(data[idx[:nsamples[i]], :nfeatures])
-            y = np.zeros((nsamples[i], len(labels)))
+            y = np.zeros((len(idx), len(labels)))
             y[:, i] = 1
             Y.append(y)
     X = np.vstack(X)
