@@ -1,7 +1,34 @@
+import sys
 import tensorflow as tf
 import numpy as np
 
 from data_proc import load_dataset
+
+class IntrusionDetectionAccuracy(tf.keras.metrics.Metric):
+
+    def __init__(self, name='intrusion_detection_accuracy', **kwargs):
+        super(IntrusionDetectionAccuracy, self).__init__(name=name, **kwargs)
+        self.cc = self.add_weight(name='cc', initializer='zeros')
+        self.tt = self.add_weight(name='tt', initializer='zeros')
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_pred = tf.reshape(tf.argmax(y_pred, axis=1), shape=(-1, 1))
+        values0 = (tf.cast(y_true, 'int32') == tf.cast(y_pred, 'int32')) & (y_true == 0)
+        values0 = tf.cast(values0, 'float32')
+        values1 = (tf.cast(y_true, 'int32') > 0) & (tf.cast(y_pred, 'int32') > 0)
+        values1 = tf.cast(values1, 'float32')
+        values2 = tf.cast(y_true, 'int32') >= 0
+        values2 = tf.cast(values2, 'float32')
+        self.cc.assign_add(tf.reduce_sum(values0) + tf.reduce_sum(values1))
+        self.tt.assign_add(tf.reduce_sum(values2))
+
+    def result(self):
+        return self.cc / self.tt
+
+    def reset_states(self):
+        self.cc.assign(0.)
+        self.tt.assign(0.)
+
 
 def create_model(nfeatures, nlayers, nhidden, ncategories, lr=1e-6):
     model = tf.keras.models.Sequential()
@@ -10,38 +37,27 @@ def create_model(nfeatures, nlayers, nhidden, ncategories, lr=1e-6):
         model.add(tf.keras.layers.Dense(nhidden, activation='relu'))
         model.add(tf.keras.layers.Dropout(0.5))
     model.add(tf.keras.layers.Dense(ncategories))
-    model.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer=tf.keras.optimizers.Adam(lr=lr), metrics=['accuracy'])
+    model.compile(
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        optimizer=tf.keras.optimizers.Adam(lr=lr),
+        metrics=['accuracy', IntrusionDetectionAccuracy()]
+    )
     return model
 
 if __name__ == '__main__':
 
     # load data
 
-    data, stats = load_dataset('data/cicids2018', 'data', '.pkl', 'stats.pkl')
-    ulabels = stats[0]
-    nfeatures = data.shape[1] - len(ulabels)
+    X_tr, Y_tr, X_val, Y_val, X_te, Y_te = load_dataset('data/cicids2018', 'data', '.pkl', 'stats.pkl')
+    nfeatures = X_tr.shape[1]
+    nlabels = np.max(Y_tr) + 1
+    print(X_tr.shape, Y_tr.shape, X_val.shape, Y_val.shape, X_te.shape, Y_te.shape)
 
-    # select data
+    # lazy labeling: 0 or 1
 
-    labels = ulabels # ['Benign', 'Brute Force -Web']
-    nsamples = [-1 for _ in labels]
-    X, Y = [], []
-    for i in range(len(labels)):
-        if labels[i] in ulabels:
-            lidx = ulabels.index(labels[i])
-            idx = np.where(data[:, nfeatures + lidx]==1)[0]
-            X.append(data[idx[:nsamples[i]], :nfeatures])
-            #y = np.zeros((len(idx[:nsamples[i]]), len(labels)))
-            #y[:, i] = 1
-            y = np.ones(len(idx[:nsamples[i]])) * lidx
-            Y.append(y)
-    X = np.vstack(X)
-    Y = np.hstack(Y)
-    idx = np.arange(X.shape[0])
-    np.random.shuffle(idx)
-    X = X[idx, :]
-    Y = Y[idx]
-    print(X.shape, Y.shape, np.sum(Y, axis=0, dtype=int))
+    if 'binary' in sys.argv[1:]:
+        for y in [Y_tr, Y_val, Y_te]:
+            y[y > 0] = 1
 
     # test models
 
@@ -54,9 +70,9 @@ if __name__ == '__main__':
     epochs=1000
     for nl in n_layers:
         for nh in n_hidden:
-            model = create_model(nfeatures, nl, nh, len(labels))
+            model = create_model(nfeatures, nl, nh, nlabels)
             model.summary()
-            h = model.fit(X, Y, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping()])
+            h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping()])
             model.save_weights(model_checkpoint_path.format(nl, nh))
             metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()])
             with open(model_stats_file.format(nl, nh), 'w') as f:
