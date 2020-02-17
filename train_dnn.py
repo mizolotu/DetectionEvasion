@@ -15,11 +15,13 @@ if __name__ == '__main__':
     nsamples = [1000, 100]
     X, Y = [], []
     for i in range(len(labels)):
-        idx = np.where(ulabels==labels[i])[0]
-        X.append(data[idx[:nsamples[i]], :nfeatures])
-        y = np.zeros((len(idx), len(labels)))
-        y[:, i] = 1
-        Y.append(y)
+        if labels[i] in ulabels:
+            lidx = ulabels.index(labels[i])
+            idx = np.where(data[:, nfeatures + lidx]==1)[0]
+            X.append(data[idx[:nsamples[i]], :nfeatures])
+            y = np.zeros((nsamples[i], len(labels)))
+            y[:, i] = 1
+            Y.append(y)
     X = np.vstack(X)
     Y = np.vstack(Y)
     print(X.shape, Y.shape)
