@@ -44,8 +44,9 @@ if __name__ == '__main__':
     n_layers = [2]
     n_hidden = [64]
     validation_split = 0.8
+    epochs=10000
     for nl in n_layers:
         for nh in n_hidden:
             model = create_model(nfeatures, nl, nh, len(labels))
-            model.fit(X, Y, validation_split=validation_split, verbose=True)
+            model.fit(X, Y, validation_split=validation_split, epochs=epochs, verbose=True)
 
