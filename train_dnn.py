@@ -8,6 +8,7 @@ def create_model(nfeatures, nlayers, nhidden, ncategories):
     model.add(tf.keras.layers.Input(shape=(nfeatures,)))
     for _ in range(nlayers):
         model.add(tf.keras.layers.Dense(nhidden, activation='relu'))
+        model.add(tf.keras.layers.Dropout(0.5))
     model.add(tf.keras.layers.Dense(ncategories, activation='softmax'))
     model.compile(loss='categorical_crossentropy', metrics=['accuracy'])
     return model
@@ -18,13 +19,12 @@ if __name__ == '__main__':
 
     data, stats = load_dataset('data/cicids2018', 'data', '.pkl', 'stats.pkl')
     ulabels = stats[0]
-    print(stats[1])
     nfeatures = data.shape[1] - len(ulabels)
 
     # select data
 
     labels = ulabels # ['Benign', 'Brute Force -Web']
-    nsamples = [10000 for _ in labels]
+    nsamples = [-1 for _ in labels]
     X, Y = [], []
     for i in range(len(labels)):
         if labels[i] in ulabels:
@@ -40,9 +40,9 @@ if __name__ == '__main__':
 
     # test models
 
-    model_dir = 'models/dnn_{0}_{1}'
+    model_checkpoint_path = 'models/dnn_{0}_{1}/last'
     n_layers = [2]
-    n_hidden = [64]
+    n_hidden = [1024]
     validation_split = 0.2
     batch_size = 512
     epochs=10000
