@@ -98,8 +98,8 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, stats_file, tvt=
         Y_tr = Y[:int(tvt[0] * X.shape[0])]
         X_val = X[int(tvt[0] * X.shape[0]) : int(np.sum(tvt[:2]) * X.shape[0]), :]
         Y_val = Y[int(tvt[0] * X.shape[0]) : int(np.sum(tvt[:2]) * X.shape[0])]
-        X_te = X[int(np.sum(tvt[:2]) * X.shape[1]) : int(np.sum(tvt) * X.shape[0]), :]
-        Y_te = Y[int(np.sum(tvt[:2]) * X.shape[1]) : int(np.sum(tvt) * X.shape[0])]
+        X_te = X[int(np.sum(tvt[:2]) * X.shape[0]) : int(np.sum(tvt) * X.shape[0]), :]
+        Y_te = Y[int(np.sum(tvt[:2]) * X.shape[0]) : int(np.sum(tvt) * X.shape[0])]
         if np.max(Y_tr) == nlabels and np.max(Y_val) == nlabels and np.max(Y_te) == nlabels:
             ready = True
     return X_tr, Y_tr, X_val, Y_val, X_te, Y_te
