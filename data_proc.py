@@ -4,11 +4,11 @@ import numpy as np
 
 from sys import getsizeof
 
-def find_data_files(dir):
+def find_data_files(dir, prefix='', postfix=''):
     data_files = []
     for f in os.listdir(dir):
         fp = osp.join(dir, f)
-        if osp.isfile(fp) and fp.endswith('.csv'):
+        if osp.isfile(fp) and fp.startswith(prefix) and fp.endswith(postfix):
             data_files.append(fp)
     return data_files
 
@@ -66,6 +66,17 @@ def one_hot_encode(values, categories):
         oh[idx, c_idx] = 1
     return oh
 
+def load_dataset(data_dir, data_file_prefix, data_file_postfix, stats_file):
+    data_files = find_data_files(data_dir, data_file_prefix, data_file_postfix)
+    data = []
+    for data_file in data_files:
+        with open(data_file, 'rb') as f:
+            data.append(pickle.load(f))
+    data = np.vstack(data)
+    with open(stats_file, 'rb') as f:
+        stats = pickle.load(f)
+    return data, stats
+
 if __name__ == '__main__':
 
     # args
@@ -76,7 +87,7 @@ if __name__ == '__main__':
     # find data files
 
     data_dir = 'data/cicids2018'
-    data_files = find_data_files(data_dir)
+    data_files = find_data_files(data_dir, '.csv')
     stats_file = 'stats.pkl'
     dataset_file = 'data{0}.pkl'
 
