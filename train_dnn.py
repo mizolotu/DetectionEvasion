@@ -56,7 +56,7 @@ if __name__ == '__main__':
         for nh in n_hidden:
             model = create_model(nfeatures, nl, nh, len(labels))
             model.summary()
-            h = model.fit(X, Y, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=True, callbacks=tf.keras.callbacks.EarlyStopping())
+            h = model.fit(X, Y, validation_split=validation_split, epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping()])
             model.save_weights(model_checkpoint_path.format(nl, nh))
             metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()])
             with open(model_stats_file.format(nl, nh), 'w') as f:
