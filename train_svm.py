@@ -49,7 +49,7 @@ if __name__ == '__main__':
     model_checkpoint_path = 'models/svm_{0}_{1}_{2}/ckpt'
     model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
     nsamples = X_tr.shape[0]
-    n_ga_iterations = 1
+    n_ga_iterations = 100
     sample_size = 1000 # int(nsamples * 0.0001)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
