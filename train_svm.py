@@ -2,7 +2,8 @@ import numpy as np
 
 from sklearn.svm import SVC
 from data_proc import load_dataset
-from joblib import dump, load
+from joblib import dump
+from time import time
 
 def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
     m, n = features.shape
@@ -22,8 +23,12 @@ def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
         idx = np.where(new_features[i, :] == 1)[0]
         if len(idx) > 0:
             model = SVC(kernel=kernel, C=penalty, cache_size=4096)
+            t_start = time()
             model.fit(x_tr[:, idx], y_tr)
+            print('{0} seconds to fit'.format(time() - t_start))
+            t_start = time()
             f[i] = model.score(x_val[:, idx], y_val)
+            print('{0} seconds to score'.format(time() - t_start))
     features_selected = new_features[np.argsort(f)[-m:], :]
     return features_selected, np.sort(f)[-m:]
 
