@@ -69,7 +69,7 @@ if __name__ == '__main__':
     n_hidden = [128, 256, 512, 768, 1024]
     n_labels = [2, int(nlabels)]
     batch_size = 512
-    epochs=1000
+    epochs = 1000
     for nl in n_layers:
         for nh in n_hidden:
             for nn in n_labels:
