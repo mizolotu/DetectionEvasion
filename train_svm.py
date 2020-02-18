@@ -19,7 +19,6 @@ def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
         new_features[2 * m + i, np.where(mut == 1)[0]] = 1 - p[np.where(mut == 1)[0]]
     f = np.zeros(3 * m)
     for i in range(3 * m):
-        print(i)
         idx = np.where(new_features[i, :] == 1)[0]
         if len(idx) > 0:
             model = SVC(kernel=kernel, C=penalty, cache_size=4096)
