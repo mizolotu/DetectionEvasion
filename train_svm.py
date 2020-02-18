@@ -49,13 +49,16 @@ if __name__ == '__main__':
     model_checkpoint_path = 'models/svm_{0}_{1}_{2}/ckpt'
     model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
     nsamples = X_tr.shape[0]
-    n_ga_iterations = 100
-    sample_size = int(nsamples * 0.0001)
+    n_ga_iterations = 1
+    sample_size = 1000 # int(nsamples * 0.0001)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
     n_labels = [2, nlabels]
-    features = np.random.randint(0, 2, (population_size, nfeatures))
+    features = np.vstack([
+        np.ones((1, nfeatures)),
+        np.random.randint(0, 2, (population_size - 1, nfeatures))
+    ])
     for kernel in kernels:
         for penalty in penalties:
             for nn in n_labels:
@@ -66,15 +69,17 @@ if __name__ == '__main__':
                         features, f = ga_iteration(kernel, penalty, features, x_tr, B_tr[sample_idx], X_val, B_val)
                     else:
                         features, f = ga_iteration(kernel, penalty, features, x_tr, Y_tr[sample_idx], X_val, Y_val)
-                    print(g, np.max(f))
+                    print(g, np.max(f), np.sum(features[-1, :]))
                 idx = np.where(features[-1, :] == 1)[0]
-                model = SVC(kernel=kernel, C=penalty, cache_size=4096)
+                model = SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1)
                 if nn == 2:
                     model.fit(X_tr[:, idx], B_tr)
                     score = model.score(X_te[:, idx], B_te)
                 else:
                     model.fit(X_tr[:, idx], Y_tr)
-                    score = model.score(X_te[:, idx], Y_te)
+                    P_te = model.predict(X_te[:, idx])
+                    P_te[P_te > 0] = 1
+                    score = len(np.where(P_te == B_te)[0]) / len(P_te)
                 dump(model, model_checkpoint_path.format(kernel, penalty, nn))
                 with open(model_stats_file.format(kernel, penalty, nn), 'w') as f:
                     f.write(score)
