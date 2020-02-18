@@ -55,7 +55,7 @@ if __name__ == '__main__':
     model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
     nsamples = X_tr.shape[0]
     n_ga_iterations = 100
-    sample_size = 1000 # int(nsamples * 0.0001)
+    sample_size = int(nsamples * 0.01)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
@@ -68,12 +68,12 @@ if __name__ == '__main__':
         for penalty in penalties:
             for nn in n_labels:
                 for g in range(n_ga_iterations):
-                    sample_idx = np.random.choice(nsamples, sample_size, replace=False)
-                    x_tr = X_tr[sample_idx, :]
+                    train_idx = np.random.choice(nsamples, sample_size, replace=False)
+                    eval_idx = np.random.choice(X_val.shape[0], sample_size, replace=False)
                     if nn == 2:
-                        features, f = ga_iteration(kernel, penalty, features, x_tr, B_tr[sample_idx], X_val, B_val)
+                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], B_tr[train_idx], X_val[eval_idx, :], B_val[eval_idx, :])
                     else:
-                        features, f = ga_iteration(kernel, penalty, features, x_tr, Y_tr[sample_idx], X_val, Y_val)
+                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], Y_tr[train_idx], X_val[eval_idx, :], Y_val[eval_idx, :])
                     print(g, np.max(f), np.sum(features[-1, :]))
                 idx = np.where(features[-1, :] == 1)[0]
                 model = SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1)
