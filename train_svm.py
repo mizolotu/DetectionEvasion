@@ -71,9 +71,9 @@ if __name__ == '__main__':
                     train_idx = np.random.choice(nsamples, sample_size, replace=False)
                     eval_idx = np.random.choice(X_val.shape[0], sample_size, replace=False)
                     if nn == 2:
-                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], B_tr[train_idx], X_val[eval_idx, :], B_val[eval_idx, :])
+                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], B_tr[train_idx], X_val[eval_idx, :], B_val[eval_idx])
                     else:
-                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], Y_tr[train_idx], X_val[eval_idx, :], Y_val[eval_idx, :])
+                        features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], Y_tr[train_idx], X_val[eval_idx, :], Y_val[eval_idx])
                     print(g, np.max(f), np.sum(features[-1, :]))
                 idx = np.where(features[-1, :] == 1)[0]
                 model = SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1)
