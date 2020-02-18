@@ -85,6 +85,7 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, stats_file, tvt=
         X.append(data[idx, :nfeatures])
         y = np.ones(len(idx)) * lidx
         Y.append(y)
+    del data
     X = np.vstack(X)
     Y = np.hstack(Y)
     nlabels = len(ulabels) - 1
