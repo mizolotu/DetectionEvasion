@@ -23,7 +23,7 @@ def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
     for i in range(3 * m):
         idx = np.where(new_features[i, :] == 1)[0]
         if len(idx) > 0:
-            model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096), n_estimators=10, max_samples=0.1)
+            model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096), n_estimators=10, max_samples=0.1, n_jobs=-1)
             t_start = time()
             model.fit(x_tr[:, idx], y_tr)
             #print('{0} seconds to fit'.format(time() - t_start))
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
     nsamples = X_tr.shape[0]
     n_ga_iterations = 100
-    sample_size = int(nsamples * 0.001)
+    sample_size = int(nsamples * 0.01)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
@@ -77,7 +77,7 @@ if __name__ == '__main__':
                         features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], Y_tr[train_idx], X_val[eval_idx, :], Y_val[eval_idx])
                     print(g, np.max(f), np.sum(features[-1, :]))
                 idx = np.where(features[-1, :] == 1)[0]
-                model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1), n_estimators=10, max_samples=0.1)
+                model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1), n_estimators=10, max_samples=0.1, n_jobs=-1)
                 if nn == 2:
                     model.fit(X_tr[:, idx], B_tr)
                     score = model.score(X_te[:, idx], B_te)
