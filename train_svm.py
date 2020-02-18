@@ -56,7 +56,7 @@ if __name__ == '__main__':
     model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
     nsamples = X_tr.shape[0]
     n_ga_iterations = 100
-    sample_size = int(nsamples * 0.01)
+    sample_size = int(nsamples * 0.001)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
