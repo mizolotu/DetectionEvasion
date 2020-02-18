@@ -55,25 +55,33 @@ if __name__ == '__main__':
 
     # lazy labeling: 0 or 1
 
-    if 'binary' in sys.argv[1:]:
-        for y in [Y_tr, Y_val, Y_te]:
-            y[y > 0] = 1
+    B_tr = Y_tr.copy()
+    B_val = Y_val.copy()
+    B_te = Y_te.copy()
+    for b in [B_tr, B_val, B_te]:
+        b[b > 0] = 1
 
     # test models
 
-    model_checkpoint_path = 'models/dnn_{0}_{1}/ckpt'
-    model_stats_file = 'models/dnn_{0}_{1}/metrics.txt'
+    model_checkpoint_path = 'models/dnn_{0}_{1}_{2}/ckpt'
+    model_stats_file = 'models/dnn_{0}_{1}_{2}/metrics.txt'
     n_layers = [1, 2, 3, 4, 5]
     n_hidden = [128, 256, 512, 768, 1024]
-    validation_split = 0.2
+    n_labels = [2, int(nlabels)]
     batch_size = 512
     epochs=1000
     for nl in n_layers:
         for nh in n_hidden:
-            model = create_model(nfeatures, nl, nh, nlabels)
-            model.summary()
-            h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping()])
-            model.save_weights(model_checkpoint_path.format(nl, nh))
-            metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()])
-            with open(model_stats_file.format(nl, nh), 'w') as f:
-                f.write(metrics)
+            for nn in n_labels:
+                model = create_model(nfeatures, nl, nh, nn)
+                model.summary()
+                if nn == 2:
+                    h = model.fit(X_tr, B_tr, validation_data=(X_val, B_val), epochs=epochs, batch_size=batch_size, verbose=False, callbacks=[tf.keras.callbacks.EarlyStopping()])
+                    results = model.evaluate(X_te, B_te)
+                else:
+                    h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=False, callbacks=[tf.keras.callbacks.EarlyStopping()])
+                    results = model.evaluate(X_te, Y_te)
+                model.save_weights(model_checkpoint_path.format(nl, nh, nn))
+                metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()] + [str(r) for r in results])
+                with open(model_stats_file.format(nl, nh, nn), 'w') as f:
+                    f.write(metrics)
