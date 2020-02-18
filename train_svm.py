@@ -1,4 +1,6 @@
+import os
 import numpy as np
+import os.path as osp
 
 from sklearn.ensemble import BaggingClassifier
 from sklearn.svm import SVC
@@ -52,11 +54,12 @@ if __name__ == '__main__':
 
     # test models
 
-    model_checkpoint_path = 'models/svm_{0}_{1}_{2}/ckpt'
-    model_stats_file = 'models/svm_{0}_{1}_{2}/metrics.txt'
+    model_save_dir = 'models/svm_{0}_{1}_{2}'
+    model_checkpoint_file = 'ckpt'
+    model_stats_file = 'metrics.txt'
     nsamples = X_tr.shape[0]
     n_ga_iterations = 100
-    sample_size = int(nsamples * 0.01)
+    sample_size = int(nsamples * 0.001)
     population_size = 5
     kernels = ['linear', 'poly', 'rbf', 'sigmoid']
     penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
@@ -86,6 +89,12 @@ if __name__ == '__main__':
                     P_te = model.predict(X_te[:, idx])
                     P_te[P_te > 0] = 1
                     score = len(np.where(P_te == B_te)[0]) / len(P_te)
-                dump(model, model_checkpoint_path.format(kernel, penalty, nn))
-                with open(model_stats_file.format(kernel, penalty, nn), 'w') as f:
-                    f.write(score)
+                msd = model_save_dir.format(kernel, penalty, nn)
+                if not osp.exists(msd):
+                    os.mkdir(msd)
+                dump(model, osp.join(msd, model_checkpoint_file))
+                line = [str(score)]
+                for i in idx:
+                    line.append(str(i))
+                with open(osp.join(msd, model_stats_file), 'w') as f:
+                    f.write(','.join(line))
