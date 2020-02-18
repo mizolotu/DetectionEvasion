@@ -10,7 +10,7 @@ from time import time
 
 def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
     m, n = features.shape
-    new_features = np.zeros((3 * m, n))
+    new_features = np.zeros((4 * m, n))
     new_features[:m, :] = features
     for i in range(m):
         p1 = features[np.random.randint(0, m), :]
@@ -19,10 +19,15 @@ def ga_iteration(kernel, penalty, features, x_tr, y_tr, x_val, y_val):
         new_features[m + i, np.where(co == 0)[0]] = p1[np.where(co == 0)[0]]
         new_features[m + i, np.where(co == 1)[0]] = p2[np.where(co == 1)[0]]
         mut = np.random.randint(0, 2, (n,))
-        p = features[np.random.randint(0, m), :]
+        p = new_features[np.random.randint(0, m), :]
+        new_features[2 * m + i, :] = p
         new_features[2 * m + i, np.where(mut == 1)[0]] = 1 - p[np.where(mut == 1)[0]]
-    f = np.zeros(3 * m)
-    for i in range(3 * m):
+        mut = np.random.randint(0, 2, (n,))
+        p = new_features[m + np.random.randint(0, m), :]
+        new_features[3 * m + i, :] = p
+        new_features[3 * m + i, np.where(mut == 1)[0]] = 1 - p[np.where(mut == 1)[0]]
+    f = np.zeros(4 * m)
+    for i in range(4 * m):
         idx = np.where(new_features[i, :] == 1)[0]
         if len(idx) > 0:
             model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096), n_estimators=10, max_samples=0.1, n_jobs=-1)
@@ -78,7 +83,7 @@ if __name__ == '__main__':
                         features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], B_tr[train_idx], X_val[eval_idx, :], B_val[eval_idx])
                     else:
                         features, f = ga_iteration(kernel, penalty, features, X_tr[train_idx, :], Y_tr[train_idx], X_val[eval_idx, :], Y_val[eval_idx])
-                    print(g, np.max(f), np.sum(features[-1, :]))
+                    print(g, np.max(f), np.sum(features, axis=1))
                 idx = np.where(features[-1, :] == 1)[0]
                 model = BaggingClassifier(SVC(kernel=kernel, C=penalty, cache_size=4096, verbose=1), n_estimators=10, max_samples=0.1, n_jobs=-1)
                 if nn == 2:
