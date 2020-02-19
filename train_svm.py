@@ -66,8 +66,8 @@ if __name__ == '__main__':
     n_ga_iterations = 100
     sample_size = int(nsamples * 0.001)
     population_size = 5
-    kernels = ['linear', 'poly', 'rbf', 'sigmoid']
-    penalties = [0.01, 0.1, 1.0, 10.0, 100.0]
+    kernels = ['rbf'] # ['linear', 'poly', 'rbf', 'sigmoid']
+    penalties = [1.0] # [0.01, 0.1, 1.0, 10.0, 100.0]
     n_labels = [2, nlabels]
     features = np.vstack([
         np.ones((1, nfeatures)),
