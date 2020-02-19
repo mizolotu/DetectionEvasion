@@ -1313,6 +1313,7 @@ def read_pcaps(dir, prefix='', postfix=''):
     # go through files and extract the basic features
 
     for pcap_file in pcap_files:
+        print(pcap_file)
         sniffer = pcap.pcap(pcap_file)
         for timestamp, raw in sniffer:
             pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
@@ -1342,6 +1343,7 @@ def read_pcaps(dir, prefix='', postfix=''):
                         flags,
                         window
                     ]
+            print(fields)
             packets.append(fields)
         print(pcap_file, len(packets))
 
