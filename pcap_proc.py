@@ -1,4 +1,4 @@
-import pcap, os
+import pcap, os, sys
 import os.path as osp
 
 from enum import Enum
@@ -1349,5 +1349,5 @@ if __name__ == '__main__':
 
     # pcap
 
-    pcap_dir = 'data/pcaps'
+    pcap_dir = sys.argv[1]
     packets = read_pcaps(pcap_dir)
