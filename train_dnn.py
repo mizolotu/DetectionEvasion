@@ -65,8 +65,8 @@ if __name__ == '__main__':
 
     model_checkpoint_path = 'models/dnn_{0}_{1}_{2}/ckpt'
     model_stats_file = 'models/dnn_{0}_{1}_{2}/metrics.txt'
-    n_layers = [1, 2, 3, 4, 5]
-    n_hidden = [128, 256, 512, 768, 1024]
+    n_layers = [2] # [1, 2, 3, 4, 5]
+    n_hidden = [256] # [128, 256, 512, 768, 1024]
     n_labels = [2, int(nlabels)]
     batch_size = 512
     epochs = 1000
