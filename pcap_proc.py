@@ -1328,7 +1328,7 @@ def read_pcaps(dir, prefix='', postfix=''):
 
     # go through files and extract the basic features
 
-    for pcap_file in pcap_files[1:]:
+    for pcap_file in pcap_files:
         sniffer = pcap.pcap(pcap_file)
         count = 0
         for timestamp, raw in sniffer:
@@ -1364,7 +1364,7 @@ def read_pcaps(dir, prefix='', postfix=''):
                     flags,
                     window
                 ]
-            packets.append(fields)
+                packets.append(fields)
         print(pcap_file, len(packets))
 
 if __name__ == '__main__':
