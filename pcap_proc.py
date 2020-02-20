@@ -772,8 +772,7 @@ class EthernetFrame(KaitaiStruct):
         arp = 2054
         ipv6 = 34525
         lldp = 35020
-        unknown0 = 27395
-        unknown1 = 59909
+        unknown = None
 
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
@@ -784,8 +783,12 @@ class EthernetFrame(KaitaiStruct):
     def _read(self):
         self.dst_mac = self._io.read_bytes(6)
         self.src_mac = self._io.read_bytes(6)
-        self.ether_type = self._root.EtherTypeEnum(self._io.read_u2be())
-        _on = self.ether_type
+        try:
+            self.ether_type = self._root.EtherTypeEnum(self._io.read_u2be())
+            _on = self.ether_type
+        except:
+            self.ether_type = self._root.EtherTypeEnum(None)
+            _on = None
         if _on == self._root.EtherTypeEnum.ipv4:
             self._raw_body = self._io.read_bytes_full()
             io = KaitaiStream(BytesIO(self._raw_body))
