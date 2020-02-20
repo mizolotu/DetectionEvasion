@@ -788,6 +788,7 @@ class EthernetFrame(KaitaiStruct):
             _on = self.ether_type
         except Exception as e:
             print('Ether type {0} is not recognized'.format(et))
+            self.ether_type = None
             _on = None
         if _on == self._root.EtherTypeEnum.ipv4:
             self._raw_body = self._io.read_bytes_full()
