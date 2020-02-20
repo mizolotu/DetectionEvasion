@@ -277,6 +277,15 @@ class UdpDatagram(KaitaiStruct):
         self.body = self._io.read_bytes_full()
 
 
+class IgmpPacket(KaitaiStruct):
+
+    def __init__(self, _io, _parent=None, _root=None):
+        self._io = _io
+        self._parent = _parent
+        self._root = _root if _root else self
+        self._io.read_bytes(8)
+        self.body = self._io.read_bytes_full()
+
 class IcmpPacket(KaitaiStruct):
 
     class IcmpTypeEnum(Enum):
@@ -286,10 +295,12 @@ class IcmpPacket(KaitaiStruct):
         redirect = 5
         echo = 8
         time_exceeded = 11
+
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
         self._parent = _parent
         self._root = _root if _root else self
+        self._io.read_bytes(8)
         self.body = self._io.read_bytes_full()
         #self._read()
 
@@ -578,6 +589,8 @@ class ProtocolBody(KaitaiStruct):
             self.body = Ipv6Packet(self._io)
         elif _on == self._root.ProtocolEnum.ipv4:
             self.body = Ipv4Packet(self._io)
+        elif _on == self._root.ProtocolEnum.igmp:
+            self.body = IgmpPacket(self._io)
 
     class NoNextHeader(KaitaiStruct):
         """Dummy type for IPv6 "no next header" type, which signifies end of headers chain."""
@@ -601,7 +614,7 @@ class ProtocolBody(KaitaiStruct):
         def _read(self):
             self.next_header_type = self._io.read_u1()
             self.hdr_ext_len = self._io.read_u1()
-            self.body = self._io.read_bytes((self.hdr_ext_len - 1))
+            self.body = self._io.read_bytes((self.hdr_ext_len - 1)) if self.hdr_ext_len > 0 else b''
             self.next_header = ProtocolBody(self.next_header_type, self._io)
 
     @property
@@ -635,7 +648,9 @@ class Ipv4Packet(KaitaiStruct):
         self._raw_options = self._io.read_bytes((self.ihl_bytes - 20))
         io = KaitaiStream(BytesIO(self._raw_options))
         self.options = self._root.Ipv4Options(io, self, self._root)
-        self._raw_body = self._io.read_bytes((self.total_length - self.ihl_bytes))
+        self.read_len = self.total_length if self.total_length > 0 else 64
+        self._raw_body = self._io.read_bytes(self.read_len - self.ihl_bytes)
+        # self._raw_body = self._io.read_bytes((self.total_length - self.ihl_bytes))
         io = KaitaiStream(BytesIO(self._raw_body))
         self.body = ProtocolBody(self.protocol, io)
 
@@ -1293,6 +1308,7 @@ class Pcap(KaitaiStruct):
             else:
                 self.body = self._io.read_bytes(self.incl_len)
 
+
 def decode_tcp_flags_value(value):
     b = '{0:b}'.format(value)[::-1]
     positions = [i for i in range(len(b)) if b[i] == '1']
@@ -1312,38 +1328,42 @@ def read_pcaps(dir, prefix='', postfix=''):
 
     # go through files and extract the basic features
 
-    for pcap_file in pcap_files:
-        print(pcap_file)
+    for pcap_file in pcap_files[1:]:
         sniffer = pcap.pcap(pcap_file)
+        count = 0
         for timestamp, raw in sniffer:
+            count += 1
+            #print(pcap_file, count)
             pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
             if pkt.ether_type.value == 2048:
                 src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
                 dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
+                src_port = 0
+                dst_port = 0
                 flags = 0
                 window = 0
-                proto = str(pkt.body.protocol)
-                pkt_size = pkt.body.total_length
+                proto = pkt.body.protocol
+                frame_size = len(raw)
+                read_size = pkt.body.read_len
                 payload_size = len(pkt.body.body.body.body)
-                if proto in ['6', '17']:
-                    src_port = str(pkt.body.body.body.src_port)
-                    dst_port = str(pkt.body.body.body.dst_port)
-                    if proto == '6':
+                if proto in [6, 17]:
+                    src_port = pkt.body.body.body.src_port
+                    dst_port = pkt.body.body.body.dst_port
+                    if proto == 6:
                         flags = pkt.body.body.body.b13
                         window = pkt.body.body.body.window_size
-                    fields = [
-                        timestamp,
-                        src_ip,
-                        int(src_port),
-                        dst_ip,
-                        int(dst_port),
-                        int(proto),
-                        pkt_size,
-                        payload_size,
-                        flags,
-                        window
-                    ]
-            print(fields)
+                fields = [
+                    timestamp,
+                    src_ip,
+                    src_port,
+                    dst_ip,
+                    dst_port,
+                    proto,
+                    frame_size,
+                    read_size - payload_size,
+                    flags,
+                    window
+                ]
             packets.append(fields)
         print(pcap_file, len(packets))
 
