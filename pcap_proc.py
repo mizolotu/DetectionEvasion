@@ -1348,28 +1348,29 @@ def read_pcaps(dir, prefix='', postfix=''):
                 flags = 0
                 window = 0
                 proto = pkt.body.protocol
-                frame_size = len(raw)
-                read_size = pkt.body.read_len
-                payload_size = len(pkt.body.body.body.body)
-                if proto in [6, 17]:
-                    src_port = pkt.body.body.body.src_port
-                    dst_port = pkt.body.body.body.dst_port
-                    if proto == 6:
-                        flags = pkt.body.body.body.b13
-                        window = pkt.body.body.body.window_size
-                fields = [
-                    timestamp,
-                    src_ip,
-                    src_port,
-                    dst_ip,
-                    dst_port,
-                    proto,
-                    frame_size,
-                    read_size - payload_size,
-                    flags,
-                    window
-                ]
-                packets.append(fields)
+                if proto in [0, 6, 17]:
+                    frame_size = len(raw)
+                    read_size = pkt.body.read_len
+                    payload_size = len(pkt.body.body.body.body)
+                    if proto in [6, 17]:
+                        src_port = pkt.body.body.body.src_port
+                        dst_port = pkt.body.body.body.dst_port
+                        if proto == 6:
+                            flags = pkt.body.body.body.b13
+                            window = pkt.body.body.body.window_size
+                    fields = [
+                        timestamp,
+                        src_ip,
+                        src_port,
+                        dst_ip,
+                        dst_port,
+                        proto,
+                        frame_size,
+                        read_size - payload_size,
+                        flags,
+                        window
+                    ]
+                    packets.append(fields)
         print(pcap_file, len(packets))
 
 if __name__ == '__main__':
