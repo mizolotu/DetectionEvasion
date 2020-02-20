@@ -773,6 +773,7 @@ class EthernetFrame(KaitaiStruct):
         ipv6 = 34525
         lldp = 35020
         unknown0 = 27395
+        unknown1 = 59909
 
     def __init__(self, _io, _parent=None, _root=None):
         self._io = _io
