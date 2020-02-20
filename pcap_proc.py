@@ -785,9 +785,10 @@ class EthernetFrame(KaitaiStruct):
         et = self._io.read_u2be()
         try:
             self.ether_type = self._root.EtherTypeEnum(et)
+            _on = self.ether_type
         except Exception as e:
             print('Ether type {0} is not recognized'.format(et))
-        _on = self.ether_type
+            _on = None
         if _on == self._root.EtherTypeEnum.ipv4:
             self._raw_body = self._io.read_bytes_full()
             io = KaitaiStream(BytesIO(self._raw_body))
