@@ -1319,59 +1319,73 @@ def decode_tcp_flags_value(value):
     positions = [i for i in range(len(b)) if b[i] == '1']
     return positions
 
-def read_pcaps(dir, prefix='', postfix=''):
+def read_pcaps(dir):
 
-    packets = []
+    # dirs
+
+    pcap_dir = osp.join(dir, 'pcaps')
+    pkt_dir = osp.join(dir, 'packets')
 
     # dir with pcap files
 
+    pcap_dirs = []
     pcap_files = []
-    for f in os.listdir(dir):
-        fp = osp.join(dir, f)
-        if osp.isfile(fp) and fp.startswith(osp.join(dir, prefix)) and fp.endswith(postfix):
-            pcap_files.append(fp)
+    for d in os.listdir(pcap_dir):
+        dd = osp.join(pcap_dir, d)
+        if osp.isdir(dd):
+            pcap_dirs.append(d)
+            pcap_files.append([])
+            for f in os.listdir(dd):
+                fp = osp.join(dd, f)
+                if osp.isfile(fp):
+                    pcap_files[-1].append(fp)
 
     # go through files and extract the basic features
 
-    for pcap_file in pcap_files:
-        sniffer = pcap.pcap(pcap_file)
-        count = 0
-        for timestamp, raw in sniffer:
-            count += 1
-            #print(pcap_file, count)
-            pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
-            if pkt.ether_type.value == 2048:
-                src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
-                dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
-                src_port = 0
-                dst_port = 0
-                flags = 0
-                window = 0
-                proto = pkt.body.protocol
-                if proto in [0, 6, 17]:
-                    frame_size = len(raw)
-                    read_size = pkt.body.read_len
-                    payload_size = len(pkt.body.body.body.body)
-                    if proto in [6, 17]:
-                        src_port = pkt.body.body.body.src_port
-                        dst_port = pkt.body.body.body.dst_port
-                        if proto == 6:
-                            flags = pkt.body.body.body.b13
-                            window = pkt.body.body.body.window_size
-                    fields = [
-                        timestamp,
-                        src_ip,
-                        src_port,
-                        dst_ip,
-                        dst_port,
-                        proto,
-                        frame_size,
-                        read_size - payload_size,
-                        flags,
-                        window
-                    ]
-                    packets.append(fields)
-        print(pcap_file, len(packets))
+    for d,lf in zip(pcap_dirs, pcap_files):
+        pkt_file = osp.join(pkt_dir, '{0}.csv'.format(d))
+        open(pkt_file, 'w').close()
+        for pcap_file in lf:
+            sniffer = pcap.pcap(pcap_file)
+            count = 0
+            lines = []
+            for timestamp, raw in sniffer:
+                count += 1
+                pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
+                if pkt.ether_type.value == 2048:
+                    src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
+                    dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
+                    src_port = 0
+                    dst_port = 0
+                    flags = 0
+                    window = 0
+                    proto = pkt.body.protocol
+                    if proto in [0, 6, 17]:
+                        frame_size = len(raw)
+                        read_size = pkt.body.read_len
+                        payload_size = len(pkt.body.body.body.body)
+                        if proto in [6, 17]:
+                            src_port = pkt.body.body.body.src_port
+                            dst_port = pkt.body.body.body.dst_port
+                            if proto == 6:
+                                flags = pkt.body.body.body.b13
+                                window = pkt.body.body.body.window_size
+                        fields = [
+                            timestamp,
+                            src_ip,
+                            src_port,
+                            dst_ip,
+                            dst_port,
+                            proto,
+                            frame_size,
+                            read_size - payload_size,
+                            flags,
+                            window
+                        ]
+                        lines.append(','.join([str(item) for item in fields]))
+            with open(pkt_file, 'a') as f:
+                f.writelines('\n'.join(lines))
+            print(pcap_file, len(lines))
 
 if __name__ == '__main__':
 
