@@ -782,7 +782,11 @@ class EthernetFrame(KaitaiStruct):
     def _read(self):
         self.dst_mac = self._io.read_bytes(6)
         self.src_mac = self._io.read_bytes(6)
-        self.ether_type = self._root.EtherTypeEnum(self._io.read_u2be())
+        et = self._io.read_u2be()
+        try:
+            self.ether_type = self._root.EtherTypeEnum(et)
+        except Exception as e:
+            print('Ether type {0} is not recognized'.format(et))
         _on = self.ether_type
         if _on == self._root.EtherTypeEnum.ipv4:
             self._raw_body = self._io.read_bytes_full()
