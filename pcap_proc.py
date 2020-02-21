@@ -1389,6 +1389,7 @@ def read_pcaps(dir):
                     print(pcap_file, count)
             with open(pkt_file, 'a') as f:
                 f.writelines('\n'.join(lines))
+                f.write('\n')
             print(pcap_file, len(lines))
 
 if __name__ == '__main__':
