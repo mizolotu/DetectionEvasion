@@ -1351,38 +1351,42 @@ def read_pcaps(dir):
             lines = []
             for timestamp, raw in sniffer:
                 count += 1
-                pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
-                if pkt.ether_type.value == 2048:
-                    src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
-                    dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
-                    src_port = 0
-                    dst_port = 0
-                    flags = 0
-                    window = 0
-                    proto = pkt.body.protocol
-                    if proto in [0, 6, 17]:
-                        frame_size = len(raw)
-                        read_size = pkt.body.read_len
-                        payload_size = len(pkt.body.body.body.body)
-                        if proto in [6, 17]:
-                            src_port = pkt.body.body.body.src_port
-                            dst_port = pkt.body.body.body.dst_port
-                            if proto == 6:
-                                flags = pkt.body.body.body.b13
-                                window = pkt.body.body.body.window_size
-                        fields = [
-                            timestamp,
-                            src_ip,
-                            src_port,
-                            dst_ip,
-                            dst_port,
-                            proto,
-                            frame_size,
-                            read_size - payload_size,
-                            flags,
-                            window
-                        ]
-                        lines.append(','.join([str(item) for item in fields]))
+                try:
+                    pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
+                    if pkt.ether_type.value == 2048:
+                        src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
+                        dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
+                        src_port = 0
+                        dst_port = 0
+                        flags = 0
+                        window = 0
+                        proto = pkt.body.protocol
+                        if proto in [0, 6, 17]:
+                            frame_size = len(raw)
+                            read_size = pkt.body.read_len
+                            payload_size = len(pkt.body.body.body.body)
+                            if proto in [6, 17]:
+                                src_port = pkt.body.body.body.src_port
+                                dst_port = pkt.body.body.body.dst_port
+                                if proto == 6:
+                                    flags = pkt.body.body.body.b13
+                                    window = pkt.body.body.body.window_size
+                            fields = [
+                                timestamp,
+                                src_ip,
+                                src_port,
+                                dst_ip,
+                                dst_port,
+                                proto,
+                                frame_size,
+                                read_size - payload_size,
+                                flags,
+                                window
+                            ]
+                            lines.append(','.join([str(item) for item in fields]))
+                except Exception as e:
+                    print(e)
+                    print(pcap_file, count)
             with open(pkt_file, 'a') as f:
                 f.writelines('\n'.join(lines))
             print(pcap_file, len(lines))
