@@ -1,9 +1,12 @@
 import pcap, os, sys
 import os.path as osp
+import numpy as np
 
+from _collections import deque
 from enum import Enum
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from socket import inet_ntop, AF_INET
+from data_proc import find_data_files
 
 class DnsPacket(KaitaiStruct):
     """(No support for Auth-Name + Add-Name for simplicity)
@@ -1319,12 +1322,387 @@ def decode_tcp_flags_value(value):
     positions = [i for i in range(len(b)) if b[i] == '1']
     return positions
 
-def read_pcaps(dir):
+def read_pcap(pcap_file):
+    sniffer = pcap.pcap(pcap_file)
+    count = 0
+    pkts = []
+    for timestamp, raw in sniffer:
+        count += 1
+        try:
+            pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
+            if pkt.ether_type.value == 2048:
+                src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
+                dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
+                src_port = 0
+                dst_port = 0
+                flags = 0
+                window = 0
+                proto = pkt.body.protocol
+                if proto in [0, 6, 17]:
+                    frame_size = len(raw)
+                    read_size = pkt.body.read_len
+                    payload_size = len(pkt.body.body.body.body)
+                    if proto in [6, 17]:
+                        src_port = pkt.body.body.body.src_port
+                        dst_port = pkt.body.body.body.dst_port
+                        if proto == 6:
+                            flags = pkt.body.body.body.b13
+                            window = pkt.body.body.body.window_size
+                    fields = [
+                        timestamp,
+                        src_ip,
+                        src_port,
+                        dst_ip,
+                        dst_port,
+                        proto,
+                        frame_size,
+                        14 + read_size - payload_size,
+                        decode_tcp_flags_value(flags),
+                        window
+                    ]
+                    pkts.append(fields)
+        except Exception as e:
+            print(e)
+            print(pcap_file, count)
+    return pkts
+
+def decode_tcp_flags_value(value):
+    b = '{0:b}'.format(value)[::-1]
+    positions = ''.join([str(i) for i in range(len(b)) if b[i] == '1'])
+    return positions
+
+def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
+
+    # src_ip-src_port-dst_ip-dst_port-protocol
+
+    # 0 - timestamp
+    # 1 - total size
+    # 2 - header size
+    # 3 - window size
+
+    features = []
+    for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
+
+        # all packets
+
+        pkts = np.array(pkt_list, ndmin=2)
+        flags = ''.join(pkt_flag_list)
+        dt = np.zeros(len(pkts))
+        dt[1:] = pkts[1:, 0] - pkts[:-1, 0]
+        idle_idx = np.where(dt > idle_thr)[0]
+        activity_start_idx = np.hstack([0, idle_idx])
+        activity_end_idx = np.hstack([idle_idx - 1, len(pkts) - 1])
+
+        # forward packets
+
+        fw_pkts = np.array([pkt for pkt,d in zip(pkt_list,pkt_dirs) if d > 0])
+        fw_flags = ''.join([fl for fl, d in zip(pkt_flag_list, pkt_dirs) if d > 0])
+        if len(fw_pkts) > 1:
+            fwt = np.zeros(len(fw_pkts))
+            fwt[1:] = fw_pkts[1:, 0] - fw_pkts[:-1, 0]
+            fw_blk_idx = np.where(fwt <= bulk_thr)[0]
+            fw_bulk = fw_pkts[fw_blk_idx, :]
+            fw_blk_dur = np.sum(fwt[fw_blk_idx])
+        elif len(fw_pkts) == 1:
+            fw_bulk = [fw_pkts[0, :]]
+            fw_blk_dur = 0
+        else:
+            fw_bulk = []
+            fw_blk_dur = 0
+        fw_bulk = np.array(fw_bulk)
+
+        # backward packets
+
+        bw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
+        bw_flags = ''.join([fl for fl, d in zip(pkt_flag_list, pkt_dirs) if d < 0])
+        if len(bw_pkts) > 1:
+            bwt = np.zeros(len(bw_pkts))
+            bwt[1:] = bw_pkts[1:, 0] - bw_pkts[:-1, 0]
+            bw_blk_idx = np.where(bwt <= bulk_thr)[0]
+            bw_bulk = bw_pkts[bw_blk_idx, :]
+            bw_blk_dur = np.sum(bwt[bw_blk_idx])
+        elif len(bw_pkts) == 1:
+            bw_bulk = [bw_pkts[0, :]]
+            bw_blk_dur = 0
+        else:
+            bw_bulk = []
+            bw_blk_dur = 0
+        bw_bulk = np.array(bw_bulk)
+
+        # calculate features
+
+        is_icmp = 1 if flow_id.endswith('0') else 0
+        is_tcp = 1 if flow_id.endswith('6') else 0
+        is_udp = 1 if flow_id.endswith('17') else 0
+
+        fl_dur = pkts[-1, 0] - pkts[0, 0]
+        tot_fw_pk = len(fw_pkts)
+        tot_bw_pk = len(bw_pkts)
+        tot_l_fw_pkt = np.sum(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+
+        fw_pkt_l_max = np.max(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+        fw_pkt_l_min = np.min(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+        fw_pkt_l_avg = np.mean(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+        fw_pkt_l_std = np.std(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+
+        bw_pkt_l_max = np.max(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+        bw_pkt_l_min = np.min(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+        bw_pkt_l_avg = np.mean(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+        bw_pkt_l_std = np.std(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+
+        fl_byt_s = np.sum(pkts[:, 1]) / fl_dur if fl_dur > 0 else -1
+        fl_pkt_s = len(pkts) / fl_dur if fl_dur > 0 else -1
+
+        fl_iat_avg = np.mean(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+        fl_iat_std = np.std(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+        fl_iat_max = np.max(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+        fl_iat_min = np.min(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+
+        fw_iat_tot = np.sum(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+        fw_iat_avg = np.mean(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+        fw_iat_std = np.std(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+        fw_iat_max = np.max(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+        fw_iat_min = np.min(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+
+        bw_iat_tot = np.sum(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+        bw_iat_avg = np.mean(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+        bw_iat_std = np.std(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+        bw_iat_max = np.max(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+        bw_iat_min = np.min(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+
+        fw_psh_flag = fw_flags.count('3') if len(fw_flags) > 0 else 0
+        bw_psh_flag = bw_flags.count('3') if len(fw_flags) > 0 else 0
+        fw_urg_flag = fw_flags.count('5') if len(bw_flags) > 0 else 0
+        bw_urg_flag = bw_flags.count('5') if len(bw_flags) > 0 else 0
+
+        fw_hdr_len = np.sum(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
+        bw_hdr_len = np.sum(bw_pkts[:, 2]) if len(bw_pkts) > 0 else 0
+
+        if len(fw_pkts) > 0:
+            fw_dur = fw_pkts[-1, 0] - fw_pkts[0, 0]
+            fw_pkt_s = len(fw_pkts) / fw_dur if fw_dur > 0 else -1
+        else:
+            fw_pkt_s = 0
+        if len(bw_pkts) > 0:
+            bw_dur = bw_pkts[-1, 0] - bw_pkts[0, 0]
+            bw_pkt_s = len(bw_pkts) / bw_dur if bw_dur > 0 else -1
+        else:
+            bw_pkt_s = 0
+
+        pkt_len_min = np.min(pkts[:, 1])
+        pkt_len_max = np.max(pkts[:, 1])
+        pkt_len_avg = np.mean(pkts[:, 1])
+        pkt_len_std = np.std(pkts[:, 1])
+
+        fin_cnt = flags.count('0')
+        syn_cnt = flags.count('1')
+        rst_cnt = flags.count('2')
+        psh_cnt = flags.count('3')
+        ack_cnt = flags.count('4')
+        urg_cnt = flags.count('5')
+        cwe_cnt = flags.count('6')
+        ece_cnt = flags.count('7')
+
+        down_up_ratio = len(bw_pkts) / len(fw_pkts) if len(fw_pkts) > 0 else -1
+
+        fw_byt_blk_avg = np.mean(fw_bulk[:, 1]) if len(fw_bulk) > 0 else 0
+        fw_pkt_blk_avg = len(fw_bulk)
+        fw_blk_rate_avg = np.sum(fw_bulk[:, 1]) / fw_blk_dur if fw_blk_dur > 0 else -1
+        bw_byt_blk_avg = np.mean(bw_bulk[:, 1]) if len(bw_bulk) > 0 else 0
+        bw_pkt_blk_avg = len(bw_bulk)
+        bw_blk_rate_avg = np.sum(bw_bulk[:, 1]) / bw_blk_dur if bw_blk_dur > 0 else -1
+
+        subfl_fw_pk = len(fw_pkts) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
+        subfl_fw_byt = np.sum(fw_pkts[:, 1]) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
+        subfl_bw_pk = len(bw_pkts) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
+        subfl_bw_byt = np.sum(bw_pkts[:, 1]) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
+
+        fw_win_byt = fw_pkts[0, 3] if len(fw_pkts) > 0 else 0
+        bw_win_byt = bw_pkts[0, 3] if len(bw_pkts) > 0 else 0
+
+        fw_act_pkt = len([pkt for pkt in fw_pkts if is_tcp == 1 and pkt[1] > pkt[2]])
+        fw_seg_min = np.min(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
+
+        atv_avg = np.mean(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_std = np.std(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_max = np.max(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_min = np.min(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+
+        idl_avg = np.mean(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_std = np.std(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_max = np.max(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
+
+        label = label_flow(flow_id, pkt_list)
+
+        # append to the feature list
+
+        features.append([
+            is_icmp,
+            is_tcp,
+            is_udp,
+            fl_dur,
+            tot_fw_pk,
+            tot_bw_pk,
+            tot_l_fw_pkt,
+            fw_pkt_l_max,
+            fw_pkt_l_min,
+            fw_pkt_l_avg,
+            fw_pkt_l_std,
+            bw_pkt_l_max,
+            bw_pkt_l_min,
+            bw_pkt_l_avg,
+            bw_pkt_l_std,
+            fl_byt_s,
+            fl_pkt_s,
+            fl_iat_avg,
+            fl_iat_std,
+            fl_iat_max,
+            fl_iat_min,
+            fw_iat_tot,
+            fw_iat_avg,
+            fw_iat_std,
+            fw_iat_max,
+            fw_iat_min,
+            bw_iat_tot,
+            bw_iat_avg,
+            bw_iat_std,
+            bw_iat_max,
+            bw_iat_min,
+            fw_psh_flag,
+            bw_psh_flag,
+            fw_urg_flag,
+            bw_urg_flag,
+            fw_hdr_len,
+            bw_hdr_len,
+            fw_pkt_s,
+            bw_pkt_s,
+            pkt_len_min,
+            pkt_len_max,
+            pkt_len_avg,
+            pkt_len_std,
+            fin_cnt,
+            syn_cnt,
+            rst_cnt,
+            psh_cnt,
+            ack_cnt,
+            urg_cnt,
+            cwe_cnt,
+            ece_cnt,
+            down_up_ratio,
+            fw_byt_blk_avg,
+            fw_pkt_blk_avg,
+            fw_blk_rate_avg,
+            bw_byt_blk_avg,
+            bw_pkt_blk_avg,
+            bw_blk_rate_avg,
+            subfl_fw_pk,
+            subfl_fw_byt,
+            subfl_bw_pk,
+            subfl_bw_byt,
+            fw_win_byt,
+            bw_win_byt,
+            fw_act_pkt,
+            fw_seg_min,
+            atv_avg,
+            atv_std,
+            atv_max,
+            atv_min,
+            idl_avg,
+            idl_std,
+            idl_max,
+            idl_min,
+            label
+        ])
+
+    return features
+
+def label_flow(flow_id, flow_pkts):
+    if '18.218.115.60' in flow_id and '-6' in flow_id:
+        label = 1  # web brute-force
+    else:
+        label = 0
+    return label
+
+def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_time, idle_thr=5.0, duration_thr=120.0):
+    flow_ids_new = []
+    flow_pkts_new = []
+    flow_pkt_flags_new = []
+    flow_dirs_new = []
+    for fi, fp, ff, fd in zip(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs):
+        flags = ''.join(ff)
+        if ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
+            pass
+        elif current_time - fp[-1][0] > duration_thr:
+            pass
+        else:
+            flow_ids_new.append(fi)
+            flow_pkts_new.append(fp)
+            flow_pkt_flags_new.append(ff)
+            flow_dirs_new.append(fd)
+    return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new
+
+def extract_flows(pkts, step=1.0, window=5):
+    flows = []
+    tracked_flow_ids = []
+    tracked_flow_packets = []
+    tracked_flow_pkt_flags = []
+    tracked_flow_directions = []
+    timeline = np.hstack([pkt[0] for pkt in pkts])
+    time_min = np.floor(np.min(timeline))
+    id_idx = np.array([1, 2, 3, 4, 5])
+    reverse_id_idx = np.array([3, 4, 1, 2, 5])
+    window_flow_ids = deque(maxlen=window)
+    step_flow_ids = []
+    t = time_min + step
+    for i, pkt in enumerate(pkts):
+        if (i + 1) % (len(pkts) // 100) == 0:
+            print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
+        if pkt[0] > t or i == len(pkts) - 1:
+            window_flow_ids.append(step_flow_ids)
+            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
+            flows.extend(features)
+            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions = clean_flow_buffer(
+                tracked_flow_ids,
+                tracked_flow_packets,
+                tracked_flow_pkt_flags,
+                tracked_flow_directions,
+                t
+            )
+            step_flow_ids = []
+            t = int(pkt[0]) + step
+        id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
+        reverse_id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
+        if id not in step_flow_ids and reverse_id not in step_flow_ids:
+            step_flow_ids.append(id)
+        if id not in tracked_flow_ids and reverse_id not in tracked_flow_ids:
+            tracked_flow_ids.append(id)
+            tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
+            tracked_flow_pkt_flags.append([pkt[8]])
+            tracked_flow_directions.append([1])
+        else:
+            if id in tracked_flow_ids:
+                direction = 1
+                idx = tracked_flow_ids.index(id)
+            else:
+                direction = -1
+                idx = tracked_flow_ids.index(reverse_id)
+            tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
+            tracked_flow_pkt_flags[idx].append(pkt[8])
+            tracked_flow_directions[idx].append(direction)
+    return flows
+
+
+if __name__ == '__main__':
 
     # dirs
 
-    pcap_dir = osp.join(dir, 'pcaps')
-    pkt_dir = osp.join(dir, 'packets')
+    pcap_dir = sys.argv[1]
+    main_dir = osp.dirname(pcap_dir)
+    pkt_dir = osp.join(main_dir, 'packets')
+    if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
+    flow_dir = osp.join(main_dir, 'flows')
+    if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
 
     # dir with pcap files
 
@@ -1334,72 +1712,32 @@ def read_pcaps(dir):
         dd = osp.join(pcap_dir, d)
         if osp.isdir(dd):
             pcap_dirs.append(d)
-            pcap_files.append([])
-            for f in os.listdir(dd):
-                fp = osp.join(dd, f)
-                if osp.isfile(fp):
-                    pcap_files[-1].append(fp)
+            pcap_files.append(find_data_files(dd))
 
-    # go through files and extract the basic features
+    # read pcaps one by one
 
-    for d,lf in zip(pcap_dirs, pcap_files):
-        pkt_file = osp.join(pkt_dir, '{0}.csv'.format(d))
-        open(pkt_file, 'w').close()
-        for pcap_file in lf:
-            sniffer = pcap.pcap(pcap_file)
-            count = 0
-            lines = []
-            for timestamp, raw in sniffer:
-                count += 1
-                try:
-                    pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
-                    if pkt.ether_type.value == 2048:
-                        src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
-                        dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
-                        src_port = 0
-                        dst_port = 0
-                        flags = 0
-                        window = 0
-                        proto = pkt.body.protocol
-                        if proto in [0, 6, 17]:
-                            frame_size = len(raw)
-                            read_size = pkt.body.read_len
-                            payload_size = len(pkt.body.body.body.body)
-                            if proto in [6, 17]:
-                                src_port = pkt.body.body.body.src_port
-                                dst_port = pkt.body.body.body.dst_port
-                                if proto == 6:
-                                    flags = pkt.body.body.body.b13
-                                    window = pkt.body.body.body.window_size
-                            fields = [
-                                timestamp,
-                                src_ip,
-                                src_port,
-                                dst_ip,
-                                dst_port,
-                                proto,
-                                frame_size,
-                                14 + read_size - payload_size,
-                                decode_tcp_flags_value(flags),
-                                window
-                            ]
-                            lines.append(','.join([str(item) for item in fields]))
-                except Exception as e:
-                    print(e)
-                    print(pcap_file, count)
-            with open(pkt_file, 'a') as f:
+    for pcap_dir, pcaps in zip(pcap_dirs, pcap_files):
+        pkt_sub_dir = osp.join(pkt_dir, pcap_dir)
+        if not osp.exists(pkt_sub_dir): os.makedirs(pkt_sub_dir)
+        flow_sub_dir = osp.join(flow_dir, pcap_dir)
+        if not osp.exists(flow_sub_dir): os.makedirs(flow_sub_dir)
+        for i,pcap_file in enumerate(pcaps):
+            print(i, pcap_file)
+            pkt_file = osp.join(pkt_sub_dir, osp.basename(pcap_file))
+            flow_file = osp.join(flow_sub_dir, osp.basename(pcap_file))
+
+            # packets
+
+            packets = read_pcap(pcap_file)
+            lines = [','.join([str(item) for item in packet]) for packet in packets]
+            with open(pkt_file, 'w') as f:
                 f.writelines('\n'.join(lines))
-                f.write('\n')
-            print(pcap_file, len(lines))
+            print('{0} packets have been extracted and saved'.format(len(packets)))
 
-def decode_tcp_flags_value(value):
-    b = '{0:b}'.format(value)[::-1]
-    positions = ''.join([str(i) for i in range(len(b)) if b[i] == '1'])
-    return positions
+            # flows
 
-if __name__ == '__main__':
-
-    # pcap
-
-    pcap_dir = sys.argv[1]
-    packets = read_pcaps(pcap_dir)
+            flows = extract_flows(packets)
+            lines = [','.join([str(item) for item in flow]) for flow in flows]
+            with open(flow_file, 'w') as f:
+                f.writelines('\n'.join(lines))
+            print('{0} flows have been extracted and saved'.format(len(flows)))
