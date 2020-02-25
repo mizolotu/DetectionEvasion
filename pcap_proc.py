@@ -1380,7 +1380,7 @@ def read_pcaps(dir):
                                 proto,
                                 frame_size,
                                 read_size - payload_size,
-                                flags,
+                                decode_tcp_flags_value(flags),
                                 window
                             ]
                             lines.append(','.join([str(item) for item in fields]))
@@ -1391,6 +1391,11 @@ def read_pcaps(dir):
                 f.writelines('\n'.join(lines))
                 f.write('\n')
             print(pcap_file, len(lines))
+
+def decode_tcp_flags_value(value):
+    b = '{0:b}'.format(value)[::-1]
+    positions = [i for i in range(len(b)) if b[i] == '1']
+    return positions
 
 if __name__ == '__main__':
 
