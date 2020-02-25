@@ -1394,7 +1394,7 @@ def read_pcaps(dir):
 
 def decode_tcp_flags_value(value):
     b = '{0:b}'.format(value)[::-1]
-    positions = [i for i in range(len(b)) if b[i] == '1']
+    positions = ''.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
 if __name__ == '__main__':
