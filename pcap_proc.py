@@ -1,4 +1,4 @@
-import pcap, os, sys
+import pcap, os, sys, pickle
 import os.path as osp
 import numpy as np
 
@@ -1624,16 +1624,18 @@ def label_flow(flow_id, flow_pkts):
         label = 0
     return label
 
-def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_time, idle_thr=5.0, duration_thr=120.0):
+def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_time, idle_thr=5.0, tcp_duration_thr=60.0):
     flow_ids_new = []
     flow_pkts_new = []
     flow_pkt_flags_new = []
     flow_dirs_new = []
     for fi, fp, ff, fd in zip(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs):
         flags = ''.join(ff)
-        if ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
+        if (fi.endswith('0') or fi.endswith('17')) and current_time - fp[-1][0] > idle_thr:
             pass
-        elif current_time - fp[-1][0] > duration_thr:
+        elif fi.endswith('6') and ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
+            pass
+        elif current_time - fp[-1][0] > tcp_duration_thr:
             pass
         else:
             flow_ids_new.append(fi)
@@ -1656,8 +1658,8 @@ def extract_flows(pkts, step=1.0, window=5):
     step_flow_ids = []
     t = time_min + step
     for i, pkt in enumerate(pkts):
-        if (i + 1) % (len(pkts) // 100) == 0:
-            print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
+        #if (i + 1) % (len(pkts) // 100) == 0:
+        #    print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
         if pkt[0] > t or i == len(pkts) - 1:
             window_flow_ids.append(step_flow_ids)
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
@@ -1703,6 +1705,7 @@ if __name__ == '__main__':
     if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
     flow_dir = osp.join(main_dir, 'flows')
     if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
+    flow_stats_file = osp.join(flow_dir, 'stats.pkl')
 
     # dir with pcap files
 
@@ -1713,6 +1716,11 @@ if __name__ == '__main__':
         if osp.isdir(dd):
             pcap_dirs.append(d)
             pcap_files.append(find_data_files(dd))
+
+    # stats
+
+    N = 0
+    X_min, X_max, X_mean, X_std = None, None, None, None
 
     # read pcaps one by one
 
@@ -1741,3 +1749,37 @@ if __name__ == '__main__':
             with open(flow_file, 'w') as f:
                 f.writelines('\n'.join(lines))
             print('{0} flows have been extracted and saved'.format(len(flows)))
+
+            # update stats
+
+            flows = np.array(flows)
+            idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
+            x_min = np.min(flows[idx, :], axis=0)
+            x_max = np.max(flows[idx, :], axis=0)
+            x_mean = np.mean(flows[idx, :], axis=0)
+            x_std = np.std(flows[idx, :], axis=0)
+            n = flows.shape[0]
+            if X_min is None:
+                X_min = x_min
+            else:
+                X_min = np.min(np.vstack([x_min, X_min]), axis=0)
+            if X_max is None:
+                X_max = x_max
+            else:
+                X_max = np.max(np.vstack([x_max, X_max]), axis=0)
+            if X_mean is None and X_std is None:
+                X_mean = x_mean
+                X_std = x_std
+                N = n
+            else:
+                mu = (N * X_mean + n * x_mean) / (N + n)
+                D = X_mean - mu
+                d = x_mean - mu
+                X_std = np.sqrt((N * (D ** 2 + X_std ** 2) + n * (d ** 2 + x_std ** 2)) / (N + n))
+                N = N + n
+                X_mean = mu
+
+            # save stats
+
+            with open(flow_stats_file, 'w') as f:
+                pickle.dump([N, X_min, X_max, X_mean, X_std], f)
