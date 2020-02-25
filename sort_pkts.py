@@ -16,10 +16,12 @@ if __name__ == '__main__':
         p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False)
         v = p.values
         idx = np.argsort(v[:, 0])
-        #open(pkt_file, 'w').close()
-        with open(pkt_file + '_sorted', 'a') as f:
+        sorted_pkt_file = pkt_file + '_sorted'
+        open(sorted_pkt_file, 'w').close()
+        with open(sorted_pkt_file, 'a') as f:
             for i in idx:
                 f.write(','.join([str(item) for item in v[i, :]]) + '\n')
+        del v,p
 
 
 
