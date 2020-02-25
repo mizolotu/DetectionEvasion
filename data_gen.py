@@ -21,10 +21,21 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
 
     features = []
     for flow_id, pkt_list, pkt_dirs in zip(flow_ids, pkt_lists, packet_directions):
+
+        # all packets
+
         pkts = np.array(pkt_list, ndmin=2)
-        flags = ''.join([str(item) for sublist in [decode_tcp_flags_value(pkt[8]) for pkt in pkt_list] for item in sublist])
+        flags = ''.join([pkt[8] for pkt in pkt_list])
+        dt = np.zeros(len(pkts))
+        dt[1:] = pkts[1:, 0] - pkts[:-1, 0]
+        idle_idx = np.where(dt > idle_thr)[0]
+        activity_start_idx = np.hstack([0, idle_idx])
+        activity_end_idx = np.hstack([idle_idx - 1, len(pkts) - 1])
+
+        # forward packets
+
         fw_pkts = np.array([pkt for pkt,d in zip(pkt_list,pkt_dirs) if d > 0])
-        fw_flags = ''.join([str(item) for sublist in [decode_tcp_flags_value(pkt[8]) for pkt, d in zip(pkt_list, pkt_dirs) if d > 0] for item in sublist])
+        fw_flags = ''.join([pkt[8] for pkt, d in zip(pkt_list, pkt_dirs) if d > 0])
         if len(fw_pkts) > 1:
             fwt = np.zeros(len(fw_pkts))
             fwt[1:] = fw_pkts[1:, 0] - fw_pkts[:-1, 0]
@@ -38,8 +49,11 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
             fw_bulk = []
             fw_blk_dur = 0
         fw_bulk = np.array(fw_bulk)
+
+        # backward packets
+
         bw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
-        bw_flags = ''.join([str(item) for sublist in [decode_tcp_flags_value(pkt[8]) for pkt, d in zip(pkt_list, pkt_dirs) if d < 0] for item in sublist])
+        bw_flags = ''.join([pkt[8] for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
         if len(bw_pkts) > 1:
             bwt = np.zeros(len(bw_pkts))
             bwt[1:] = bw_pkts[1:, 0] - bw_pkts[:-1, 0]
@@ -55,6 +69,10 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
         bw_bulk = np.array(bw_bulk)
 
         # calculate features
+
+        is_icmp = 1 if flow_id.endswith('0') else 0
+        is_tcp = 1 if flow_id.endswith('6') else 0
+        is_udp = 1 if flow_id.endswith('17') else 0
 
         fl_dur = pkts[-1, 0] - pkts[0, 0]
         tot_fw_pk = len(fw_pkts)
@@ -144,9 +162,26 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
         fw_act_pkt = len([pkt for pkt in fw_pkts if pkt[5] == 6 and pkt[6] > pkt[7] + 14])
         fw_seg_min = np.min(fw_pkts[:, 7]) if len(fw_pkts) > 0 else 0
 
+        atv_avg = np.mean(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_std = np.std(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_max = np.max(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+        atv_min = np.min(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+
+        idl_avg = np.mean(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_std = np.std(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_max = np.max(dt[idle_idx]) if len(idle_idx) > 0 else 0
+        idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
+
+        label = label_flow(flow_id, pkt_list)
+        if label == 1:
+            print(flow_id)
+
         # append to the feature list
 
         features.append([
+            is_icmp,
+            is_tcp,
+            is_udp,
             fl_dur,
             tot_fw_pk,
             tot_bw_pk,
@@ -210,33 +245,57 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
             bw_win_byt,
             fw_act_pkt,
             fw_seg_min,
-
+            atv_avg,
+            atv_std,
+            atv_max,
+            atv_min,
+            idl_avg,
+            idl_std,
+            idl_max,
+            idl_min,
+            label
         ])
 
     return features
 
-def clean_flow_buffer(flow_ids, flow_pkts, flow_dirs):
+def label_flow(flow_id, flow_pkts):
+    if '18.218.115.60' in flow_id and '-6' in flow_id:
+        label = 1  # web brute-force
+    else:
+        label = 0
+    return label
+
+def clean_flow_buffer(flow_ids, flow_pkts, flow_dirs, current_time, idle_thr=5.0, duration_thr=120.0):
     flow_ids_new = []
     flow_pkts_new = []
     flow_dirs_new = []
     for fi, fp, fd in zip(flow_ids, flow_pkts, flow_dirs):
+        flags = ''.join([pkt[8] for pkt in fp])
+        if ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
+            pass
+        elif current_time - fp[-1][0] > duration_thr:
+            pass
+        else:
+            flow_ids_new.append(fi)
+            flow_pkts_new.append(fp)
+            flow_dirs_new.append(fd)
+    return flow_ids_new, flow_pkts_new, flow_dirs_new
 
-
-def extract_flows(pkts, step=1, window=5):
+def extract_flows(pkts, step=1.0, window=5):
     flows = []
     pkts = pkts[np.argsort(pkts[:, 0]), :]
-    flow_features = []
     tracked_flow_ids = []
     tracked_flow_packets = []
     tracked_flow_directions = []
     time_min = np.floor(np.min(pkts[:, 0]))
-    time_max = np.ceil(np.max(pkts[:, 0]))
     id_idx = np.array([1, 2, 3, 4, 5])
     reverse_id_idx = np.array([3, 4, 1, 2, 5])
     window_flow_ids = deque(maxlen=window)
     step_flow_ids = []
     t = time_min + 1
     for i, pkt in enumerate(pkts):
+        if (i + 1) % (len(pkts) // 100) == 0:
+            print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
         if pkt[0] > t or i == len(pkts) - 1:
             window_flow_ids.append(step_flow_ids)
             #ids = []
@@ -256,11 +315,14 @@ def extract_flows(pkts, step=1, window=5):
             #        tracked_flow_ids_new.append(id)
             #        tracked_flow_packets_new.append(lp)
             #        tracked_flow_directions_new.append(pd)
-            tracked_flow_ids = tracked_flow_ids_new.copy()
-            tracked_flow_packets = tracked_flow_packets_new.copy()
-            tracked_flow_directions = tracked_flow_directions_new.copy()
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_directions)
             flows.extend(features)
+            tracked_flow_ids, tracked_flow_packets, tracked_flow_directions = clean_flow_buffer(
+                tracked_flow_ids,
+                tracked_flow_packets,
+                tracked_flow_directions,
+                t
+            )
             step_flow_ids = []
             t = int(pkt[0]) + step
         id = '-'.join([str(item) for item in pkt[id_idx]])
@@ -280,7 +342,7 @@ def extract_flows(pkts, step=1, window=5):
                 idx = tracked_flow_ids.index(reverse_id)
             tracked_flow_packets[idx].append(pkt)
             tracked_flow_directions[idx].append(direction)
-    return flow_features
+    return flows
 
 if __name__ == '__main__':
 
@@ -295,7 +357,10 @@ if __name__ == '__main__':
 
     for pkt_file in pkt_files:
         t_start = time()
-        p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0)
+        p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False)
         v = p.values
         flows = extract_flows(v)
-        print(pkt_file, v.shape, time() - t_start)
+        flow_file = osp.join(flow_dir, pkt_file.split('/')[-1])
+        lines = [','.join([str(item) for item in flow]) for flow in flows]
+        with open(flow_file, 'w') as f:
+            f.writelines('\n'.join(lines))
