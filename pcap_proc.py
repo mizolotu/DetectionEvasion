@@ -1781,5 +1781,5 @@ if __name__ == '__main__':
 
             # save stats
 
-            with open(flow_stats_file, 'w') as f:
+            with open(flow_stats_file, 'wb') as f:
                 pickle.dump([N, X_min, X_max, X_mean, X_std], f)
