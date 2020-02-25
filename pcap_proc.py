@@ -1379,7 +1379,7 @@ def read_pcaps(dir):
                                 dst_port,
                                 proto,
                                 frame_size,
-                                read_size - payload_size,
+                                14 + read_size - payload_size,
                                 decode_tcp_flags_value(flags),
                                 window
                             ]
