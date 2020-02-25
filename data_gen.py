@@ -159,7 +159,7 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
         fw_win_byt = fw_pkts[0, 9] if len(fw_pkts) > 0 else 0
         bw_win_byt = bw_pkts[0, 9] if len(bw_pkts) > 0 else 0
 
-        fw_act_pkt = len([pkt for pkt in fw_pkts if pkt[5] == 6 and pkt[6] > pkt[7] + 14])
+        fw_act_pkt = len([pkt for pkt in fw_pkts if pkt[5] == 6 and pkt[6] > pkt[7]])
         fw_seg_min = np.min(fw_pkts[:, 7]) if len(fw_pkts) > 0 else 0
 
         atv_avg = np.mean(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
@@ -173,8 +173,6 @@ def calculate_features(flow_ids, pkt_lists, packet_directions, bulk_thr=1.0, idl
         idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
 
         label = label_flow(flow_id, pkt_list)
-        if label == 1:
-            print(flow_id)
 
         # append to the feature list
 
@@ -298,23 +296,6 @@ def extract_flows(pkts, step=1.0, window=5):
             print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
         if pkt[0] > t or i == len(pkts) - 1:
             window_flow_ids.append(step_flow_ids)
-            #ids = []
-            #for step_ids in window_flow_ids:
-            #    for id in step_ids:
-            #        spl = id.split('-')
-            #        reverse_id = '-'.join(spl[2:4] + spl[0:2] + spl[4:5])
-            #        if id not in ids and reverse_id not in ids:
-            #            ids.append(id)
-            #tracked_flow_ids_new = []
-            #tracked_flow_packets_new = []
-            #tracked_flow_directions_new = []
-            #for id,lp,pd in zip(tracked_flow_ids, tracked_flow_packets, tracked_flow_directions):
-            #    spl = id.split('-')
-            #    reverse_id = '-'.join(spl[2:4] + spl[0:2] + spl[4:5])
-            #    if id in ids or reverse_id in ids:
-            #        tracked_flow_ids_new.append(id)
-            #        tracked_flow_packets_new.append(lp)
-            #        tracked_flow_directions_new.append(pd)
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_directions)
             flows.extend(features)
             tracked_flow_ids, tracked_flow_packets, tracked_flow_directions = clean_flow_buffer(
