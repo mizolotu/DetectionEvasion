@@ -1720,10 +1720,10 @@ if __name__ == '__main__':
 
     # dirs
 
-    if mode == 'pcap->pkts':
+    if mode == 'pcap-pkts':
         result_dir = osp.join(main_dir, 'packets')
         if not osp.exists(result_dir): os.makedirs(result_dir)
-    elif mode == 'pkts->flows':
+    elif mode == 'pkts-flows':
         result_dir = osp.join(main_dir, 'flows')
         if not osp.exists(result_dir): os.makedirs(result_dir)
         flow_stats_file = osp.join(result_dir, 'stats.pkl')
@@ -1758,9 +1758,9 @@ if __name__ == '__main__':
             result_file = osp.join(result_sub_dir, osp.basename(input_file))
             flow_file = osp.join(result_sub_dir, osp.basename(result_file))
 
-            if mode == 'pcap->pkts':
+            if mode == 'pcap-pkts':
                 results = read_pcap(input_file)
-            elif mode == 'pkts->flows':
+            elif mode == 'pkts-flows':
                 results = extract_flows(input_file)
             lines = [','.join([str(item) for item in result]) for result in results]
             with open(result_file, 'w') as f:
@@ -1768,7 +1768,7 @@ if __name__ == '__main__':
             print('{0} {1} have been extracted and saved'.format(len(results), mode.split('->')[1]))
 
 
-            if mode == 'pkts->flows':
+            if mode == 'pkts-flows':
                 flows = np.array(results)
                 idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
                 x_min = np.min(flows[idx, :], axis=0)
