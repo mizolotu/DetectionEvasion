@@ -1725,6 +1725,9 @@ if __name__ == '__main__':
         result_dir = osp.join(main_dir, 'flows')
         if not osp.exists(result_dir): os.makedirs(result_dir)
         flow_stats_file = osp.join(result_dir, 'stats.pkl')
+    else:
+        print('What?')
+        sys.exit(1)
 
     # dir with pcap files
 
