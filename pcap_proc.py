@@ -1765,7 +1765,7 @@ if __name__ == '__main__':
             lines = [','.join([str(item) for item in result]) for result in results]
             with open(result_file, 'w') as f:
                 f.writelines('\n'.join(lines))
-            print('{0} {1} have been extracted and saved'.format(len(results), mode.split('->')[1]))
+            print('{0} {1} have been extracted and saved'.format(len(results), mode.split('-')[1]))
 
 
             if mode == 'pkts-flows':
