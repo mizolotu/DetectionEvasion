@@ -1715,6 +1715,8 @@ if __name__ == '__main__':
     mode = sys.argv[1]
     input_dir = sys.argv[2]
     main_dir = osp.dirname(input_dir)
+    print(mode)
+    print(input_dir)
 
     # dirs
 
