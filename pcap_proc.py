@@ -1368,7 +1368,7 @@ def read_pcap(pcap_file):
 
 def decode_tcp_flags_value(value):
     b = '{0:b}'.format(value)[::-1]
-    positions = ''.join([str(i) for i in range(len(b)) if b[i] == '1'])
+    positions = '.'.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
 def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
@@ -1385,6 +1385,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
 
         # all packets
 
+        print(pkt_flag_list)
         pkts = np.array(pkt_list, ndmin=2)
         flags = ''.join(pkt_flag_list)
         dt = np.zeros(len(pkts))
@@ -1654,7 +1655,7 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
     return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new
 
 def extract_flows(pkt_file, step=1.0, window=5):
-    p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0)
+    p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False)
     pkts = p.values
     flows = []
     tracked_flow_ids = []
@@ -1713,20 +1714,16 @@ if __name__ == '__main__':
     # args
 
     mode = sys.argv[1]
-    input_dir = sys.argv[2]
-    main_dir = osp.dirname(input_dir)
-    print(mode)
-    print(input_dir)
+    main_dir = sys.argv[2]
 
     # dirs
 
-    if mode == 'pcap-pkts':
-        result_dir = osp.join(main_dir, 'packets')
+    if len(mode.split('-')) == 2:
+        input_dir = osp.join(main_dir, mode.split('-')[0])
+        result_dir = osp.join(main_dir, mode.split('-')[1])
         if not osp.exists(result_dir): os.makedirs(result_dir)
-    elif mode == 'pkts-flows':
-        result_dir = osp.join(main_dir, 'flows')
-        if not osp.exists(result_dir): os.makedirs(result_dir)
-        flow_stats_file = osp.join(result_dir, 'stats.pkl')
+        if mode.split('-')[1] == 'flows':
+            flow_stats_file = osp.join(result_dir, 'stats.pkl')
     else:
         print('What?')
         sys.exit(1)
@@ -1758,9 +1755,9 @@ if __name__ == '__main__':
             result_file = osp.join(result_sub_dir, osp.basename(input_file))
             flow_file = osp.join(result_sub_dir, osp.basename(result_file))
 
-            if mode == 'pcap-pkts':
+            if mode == 'pcaps-packets':
                 results = read_pcap(input_file)
-            elif mode == 'pkts-flows':
+            elif mode == 'packets-flows':
                 results = extract_flows(input_file)
             lines = [','.join([str(item) for item in result]) for result in results]
             with open(result_file, 'w') as f:
@@ -1768,7 +1765,7 @@ if __name__ == '__main__':
             print('{0} {1} have been extracted and saved'.format(len(results), mode.split('-')[1]))
 
 
-            if mode == 'pkts-flows':
+            if mode == 'packets-flows':
                 flows = np.array(results)
                 idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
                 x_min = np.min(flows[idx, :], axis=0)
