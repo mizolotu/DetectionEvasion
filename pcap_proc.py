@@ -1,8 +1,9 @@
-import pcap, os, sys, pickle
+import pcap, os, sys, pickle, pandas
 import os.path as osp
 import numpy as np
 
-from _collections import deque
+from time import time
+from collections import deque
 from enum import Enum
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from socket import inet_ntop, AF_INET
@@ -1361,9 +1362,8 @@ def read_pcap(pcap_file):
                         window
                     ]
                     pkts.append(fields)
-        except Exception as e:
-            print(e)
-            print(pcap_file, count)
+        except:
+            pass
     return pkts
 
 def decode_tcp_flags_value(value):
@@ -1629,22 +1629,33 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
     flow_pkts_new = []
     flow_pkt_flags_new = []
     flow_dirs_new = []
+    count_stay = 0
+    count_tcp = 0
+    count_not_tcp = 0
+    count_time = 0
     for fi, fp, ff, fd in zip(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs):
         flags = ''.join(ff)
         if (fi.endswith('0') or fi.endswith('17')) and current_time - fp[-1][0] > idle_thr:
+            count_not_tcp += 1
             pass
         elif fi.endswith('6') and ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
+            count_tcp += 1
             pass
         elif current_time - fp[-1][0] > tcp_duration_thr:
+            count_time += 1
             pass
         else:
+            count_stay += 1
             flow_ids_new.append(fi)
             flow_pkts_new.append(fp)
             flow_pkt_flags_new.append(ff)
             flow_dirs_new.append(fd)
+    print(count_stay, count_not_tcp, count_tcp, count_time)
     return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new
 
-def extract_flows(pkts, step=1.0, window=5):
+def extract_flows(pkt_file, step=1.0, window=5):
+    p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0)
+    pkts = p.values
     flows = []
     tracked_flow_ids = []
     tracked_flow_packets = []
@@ -1662,7 +1673,9 @@ def extract_flows(pkts, step=1.0, window=5):
         #    print('{0}% completed'.format(i * 100 // len(pkts)), len(flows))
         if pkt[0] > t or i == len(pkts) - 1:
             window_flow_ids.append(step_flow_ids)
+            t_start = time()
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
+            print(time() - t_start)
             flows.extend(features)
             tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions = clean_flow_buffer(
                 tracked_flow_ids,
@@ -1697,89 +1710,88 @@ def extract_flows(pkts, step=1.0, window=5):
 
 if __name__ == '__main__':
 
+    # args
+
+    mode = sys.argv[1]
+    input_dir = sys.argv[2]
+    main_dir = osp.dirname(input_dir)
+
     # dirs
 
-    pcap_dir = sys.argv[1]
-    main_dir = osp.dirname(pcap_dir)
-    pkt_dir = osp.join(main_dir, 'packets')
-    if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
-    flow_dir = osp.join(main_dir, 'flows')
-    if not osp.exists(pkt_dir): os.makedirs(pkt_dir)
-    flow_stats_file = osp.join(flow_dir, 'stats.pkl')
+    if mode == 'pcap->pkts':
+        result_dir = osp.join(main_dir, 'packets')
+        if not osp.exists(result_dir): os.makedirs(result_dir)
+    elif mode == 'pkts->flows':
+        result_dir = osp.join(main_dir, 'flows')
+        if not osp.exists(result_dir): os.makedirs(result_dir)
+        flow_stats_file = osp.join(result_dir, 'stats.pkl')
 
     # dir with pcap files
 
-    pcap_dirs = []
-    pcap_files = []
-    for d in os.listdir(pcap_dir):
-        dd = osp.join(pcap_dir, d)
+    input_subdir_names = []
+    input_files = []
+    for d in os.listdir(input_dir):
+        dd = osp.join(input_dir, d)
         if osp.isdir(dd):
-            pcap_dirs.append(d)
-            pcap_files.append(find_data_files(dd))
+            input_subdir_names.append(d)
+            input_files.append(find_data_files(dd))
 
     # stats
 
     N = 0
     X_min, X_max, X_mean, X_std = None, None, None, None
 
-    # read pcaps one by one
+    # read inputs one by one
 
-    for pcap_dir, pcaps in zip(pcap_dirs, pcap_files):
-        pkt_sub_dir = osp.join(pkt_dir, pcap_dir)
-        if not osp.exists(pkt_sub_dir): os.makedirs(pkt_sub_dir)
-        flow_sub_dir = osp.join(flow_dir, pcap_dir)
-        if not osp.exists(flow_sub_dir): os.makedirs(flow_sub_dir)
-        for i,pcap_file in enumerate(pcaps):
-            print(i, pcap_file)
-            pkt_file = osp.join(pkt_sub_dir, osp.basename(pcap_file))
-            flow_file = osp.join(flow_sub_dir, osp.basename(pcap_file))
+    for input_subdir_name, inputs in zip(input_subdir_names, input_files):
+        input_sub_dir = osp.join(input_dir, input_subdir_name)
+        if not osp.exists(input_sub_dir): os.makedirs(input_sub_dir)
+        result_sub_dir = osp.join(result_dir, input_subdir_name)
+        if not osp.exists(result_sub_dir): os.makedirs(result_sub_dir)
+        for i,input_file in enumerate(inputs):
+            print(i, input_file)
+            result_file = osp.join(result_sub_dir, osp.basename(input_file))
+            flow_file = osp.join(result_sub_dir, osp.basename(result_file))
 
-            # packets
-
-            packets = read_pcap(pcap_file)
-            lines = [','.join([str(item) for item in packet]) for packet in packets]
-            with open(pkt_file, 'w') as f:
+            if mode == 'pcap->pkts':
+                results = read_pcap(input_file)
+            elif mode == 'pkts->flows':
+                results = extract_flows(input_file)
+            lines = [','.join([str(item) for item in result]) for result in results]
+            with open(result_file, 'w') as f:
                 f.writelines('\n'.join(lines))
-            print('{0} packets have been extracted and saved'.format(len(packets)))
+            print('{0} {1} have been extracted and saved'.format(len(results), mode.split('->')[1]))
 
-            # flows
 
-            flows = extract_flows(packets)
-            lines = [','.join([str(item) for item in flow]) for flow in flows]
-            with open(flow_file, 'w') as f:
-                f.writelines('\n'.join(lines))
-            print('{0} flows have been extracted and saved'.format(len(flows)))
+            if mode == 'pkts->flows':
+                flows = np.array(results)
+                idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
+                x_min = np.min(flows[idx, :], axis=0)
+                x_max = np.max(flows[idx, :], axis=0)
+                x_mean = np.mean(flows[idx, :], axis=0)
+                x_std = np.std(flows[idx, :], axis=0)
+                n = flows.shape[0]
+                if X_min is None:
+                    X_min = x_min
+                else:
+                    X_min = np.min(np.vstack([x_min, X_min]), axis=0)
+                if X_max is None:
+                    X_max = x_max
+                else:
+                    X_max = np.max(np.vstack([x_max, X_max]), axis=0)
+                if X_mean is None and X_std is None:
+                    X_mean = x_mean
+                    X_std = x_std
+                    N = n
+                else:
+                    mu = (N * X_mean + n * x_mean) / (N + n)
+                    D = X_mean - mu
+                    d = x_mean - mu
+                    X_std = np.sqrt((N * (D ** 2 + X_std ** 2) + n * (d ** 2 + x_std ** 2)) / (N + n))
+                    N = N + n
+                    X_mean = mu
 
-            # update stats
+                # save stats
 
-            flows = np.array(flows)
-            idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
-            x_min = np.min(flows[idx, :], axis=0)
-            x_max = np.max(flows[idx, :], axis=0)
-            x_mean = np.mean(flows[idx, :], axis=0)
-            x_std = np.std(flows[idx, :], axis=0)
-            n = flows.shape[0]
-            if X_min is None:
-                X_min = x_min
-            else:
-                X_min = np.min(np.vstack([x_min, X_min]), axis=0)
-            if X_max is None:
-                X_max = x_max
-            else:
-                X_max = np.max(np.vstack([x_max, X_max]), axis=0)
-            if X_mean is None and X_std is None:
-                X_mean = x_mean
-                X_std = x_std
-                N = n
-            else:
-                mu = (N * X_mean + n * x_mean) / (N + n)
-                D = X_mean - mu
-                d = x_mean - mu
-                X_std = np.sqrt((N * (D ** 2 + X_std ** 2) + n * (d ** 2 + x_std ** 2)) / (N + n))
-                N = N + n
-                X_mean = mu
-
-            # save stats
-
-            with open(flow_stats_file, 'wb') as f:
-                pickle.dump([N, X_min, X_max, X_mean, X_std], f)
+                with open(flow_stats_file, 'wb') as f:
+                    pickle.dump([N, X_min, X_max, X_mean, X_std], f)
