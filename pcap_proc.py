@@ -1375,7 +1375,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         # all packets
 
         pkts = np.array(pkt_list, ndmin=2)
-        flags = ''.join(pkt_flag_list)
+        flags = ''.join([str(pf) for pf in pkt_flag_list])
         dt = np.zeros(len(pkts))
         dt[1:] = pkts[1:, 0] - pkts[:-1, 0]
         idle_idx = np.where(dt > idle_thr)[0]
