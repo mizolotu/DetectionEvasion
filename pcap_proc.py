@@ -1385,7 +1385,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         # forward packets
 
         fw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d > 0])
-        fw_flags = ''.join([fl for fl, d in zip(pkt_flag_list, pkt_dirs) if d > 0])
+        fw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d > 0])
         if len(fw_pkts) > 1:
             fwt = np.zeros(len(fw_pkts))
             fwt[1:] = fw_pkts[1:, 0] - fw_pkts[:-1, 0]
@@ -1403,7 +1403,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         # backward packets
 
         bw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
-        bw_flags = ''.join([fl for fl, d in zip(pkt_flag_list, pkt_dirs) if d < 0])
+        bw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d < 0])
         if len(bw_pkts) > 1:
             bwt = np.zeros(len(bw_pkts))
             bwt[1:] = bw_pkts[1:, 0] - bw_pkts[:-1, 0]
