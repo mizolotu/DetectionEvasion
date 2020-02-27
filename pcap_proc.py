@@ -1894,13 +1894,6 @@ def extract_flows(pkt_file, step=1.0):
 
     # threads
 
-    try:
-        res = open('/proc/cpuinfo').read().count('processor\t:')
-        if res > 0:
-            n_workers = res
-    except IOError:
-        n_workers = 8
-    n_workers = 1
     print('Workers: {0}'.format(n_workers))
     workers = [Thread(target=calculate_features, args=(worker_idx,), daemon=True) for worker_idx in range(n_workers)]
     for w in workers: w.start()
@@ -1955,6 +1948,7 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     main_dir = sys.argv[2]
+    n_workers = int(sys.argv[3])
 
     # dirs
 
