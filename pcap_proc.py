@@ -1359,7 +1359,7 @@ def decode_tcp_flags_value(value):
     positions = '.'.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
-def calculate_features(flow_q, features_q, bulk_thr=1.0, idle_thr=5.0):
+def calculate_features(idx, bulk_thr=1.0, idle_thr=5.0):
 
     # src_ip-src_port-dst_ip-dst_port-protocol
 
@@ -1368,8 +1368,8 @@ def calculate_features(flow_q, features_q, bulk_thr=1.0, idle_thr=5.0):
     # 2 - header size
     # 3 - window size
 
+    wcount = 0
     while True:
-        print(flow_q.qsize())
         features = []
         flow_ids, pkt_lists, pkt_flags, pkt_directions = flow_q.get()
 
@@ -1608,6 +1608,8 @@ def calculate_features(flow_q, features_q, bulk_thr=1.0, idle_thr=5.0):
             ])
 
         features_q.put(features)
+        wcount += 1
+        #print('Worker {0} processed {1} windows'.format(idx, wcount))
 
 def calculate_features_(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
 
@@ -1886,6 +1888,8 @@ def extract_flows(pkt_file, step=1.0):
     reverse_id_idx = np.array([3, 4, 1, 2, 5])
     step_flow_ids = []
     t = time_min + step
+    sent_count = 0
+    received_count = 0
 
     # threads
 
@@ -1895,7 +1899,7 @@ def extract_flows(pkt_file, step=1.0):
             n_workers = res
     except IOError:
         n_workers = 8
-    workers = [Thread(target=calculate_features, daemon=True) for _ in range(n_workers)]
+    workers = [Thread(target=calculate_features, args=(worker_idx,), daemon=True) for worker_idx in range(n_workers)]
     for w in workers: w.start()
 
     # main loop
@@ -1904,6 +1908,7 @@ def extract_flows(pkt_file, step=1.0):
         if pkt[0] > t or i == len(pkts) - 1:
             #features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
             flow_q.put((tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions))
+            sent_count += 1
             tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions = clean_flow_buffer(
                 tracked_flow_ids,
                 tracked_flow_packets,
@@ -1936,8 +1941,9 @@ def extract_flows(pkt_file, step=1.0):
     # collect flow features from the queue
 
     flows = []
-    while not features_q.empty:
+    while received_count < sent_count:
         flows.extend(features_q.get())
+        received_count += 1
     return flows
 
 if __name__ == '__main__':
