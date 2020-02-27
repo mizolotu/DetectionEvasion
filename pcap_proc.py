@@ -1879,11 +1879,14 @@ def extract_flows(pkt_file, ips_to_look_for, step=1.0):
     unique_ips = list(set(pkts[:,1]))
     unique_ips.extend(pkts[:, 3])
     unique_ips = list(set(unique_ips))
-    process = False
-    for ip in ips_to_look_for:
-        if ip in unique_ips:
-            process = True
-            break
+    if len(ips_to_look_for) > 0:
+        process = False
+        for ip in ips_to_look_for:
+            if ip in unique_ips:
+                process = True
+                break
+    else:
+        process = True
 
     flows = []
     if process:
@@ -1981,14 +1984,13 @@ if __name__ == '__main__':
         for i,input_file in enumerate(inputs):
             print(i, input_file)
             result_file = osp.join(result_sub_dir, osp.basename(input_file))
-            flow_file = osp.join(result_sub_dir, osp.basename(result_file))
-
             if mode == 'pcaps-packets':
                 results = read_pcap(input_file)
             elif mode == 'packets-flows':
                 t_start = time()
                 results = extract_flows(input_file, look_for_ips)
-                print(time() - t_start)
+                labels = np.array([line[-1] for line in results])
+                print(time() - t_start, len(labels), np.sum(labels))
             if len(results) > 0:
                 lines = [','.join([str(item) for item in result]) for result in results]
                 with open(result_file, 'w') as f:
