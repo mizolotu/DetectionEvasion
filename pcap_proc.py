@@ -1936,7 +1936,6 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     main_dir = sys.argv[2]
-    n_workers = int(sys.argv[3])
 
     # dirs
 
