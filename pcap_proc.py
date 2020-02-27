@@ -1857,8 +1857,7 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
     count_not_tcp = 0
     count_time = 0
     for fi, fp, ff, fd in zip(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs):
-        print(ff)
-        flags = ''.join(ff)
+        flags = ''.join([str(f) for f in ff])
         if (fi.endswith('0') or fi.endswith('17')) and current_time - fp[-1][0] > idle_thr:
             count_not_tcp += 1
         elif fi.endswith('6') and ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
