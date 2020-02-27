@@ -1610,6 +1610,7 @@ def calculate_features(idx, bulk_thr=1.0, idle_thr=5.0):
         features_q.put(features)
         wcount += 1
         #print('Worker {0} processed {1} windows'.format(idx, wcount))
+    #return features
 
 def calculate_features_(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
 
@@ -1899,6 +1900,8 @@ def extract_flows(pkt_file, step=1.0):
             n_workers = res
     except IOError:
         n_workers = 8
+    n_workers = 1
+    print('Workers: {0}'.format(n_workers))
     workers = [Thread(target=calculate_features, args=(worker_idx,), daemon=True) for worker_idx in range(n_workers)]
     for w in workers: w.start()
 
@@ -1997,7 +2000,9 @@ if __name__ == '__main__':
             elif mode == 'packets-flows':
                 flow_q = Queue()
                 features_q = Queue()
+                t_start = time()
                 results = extract_flows(input_file)
+                print(time() - t_start)
             lines = [','.join([str(item) for item in result]) for result in results]
             with open(result_file, 'w') as f:
                 f.writelines('\n'.join(lines))
