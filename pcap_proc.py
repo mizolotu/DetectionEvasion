@@ -1860,21 +1860,17 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
         flags = ''.join(ff)
         if (fi.endswith('0') or fi.endswith('17')) and current_time - fp[-1][0] > idle_thr:
             count_not_tcp += 1
-            pass
         elif fi.endswith('6') and ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
             count_tcp += 1
-            pass
         elif current_time - fp[-1][0] > tcp_duration_thr:
             count_time += 1
-            pass
         else:
             count_stay += 1
             flow_ids_new.append(fi)
             flow_pkts_new.append(fp)
             flow_pkt_flags_new.append(ff)
             flow_dirs_new.append(fd)
-    #print(count_stay, count_not_tcp, count_tcp, count_time)
-    return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new
+    return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, [count_tcp, count_not_tcp, count_time]
 
 def extract_flows(pkt_file, step=1.0):
 
@@ -1888,30 +1884,27 @@ def extract_flows(pkt_file, step=1.0):
     time_min = np.floor(np.min(timeline))
     id_idx = np.array([1, 2, 3, 4, 5])
     reverse_id_idx = np.array([3, 4, 1, 2, 5])
-    step_flow_ids = []
     t = time_min + step
     flows = []
+    counts_total = [0, 0, 0]
 
     # main loop
 
     for i, pkt in enumerate(pkts):
         if pkt[0] > t or i == len(pkts) - 1:
-
-            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
-            flows.extend(features)
-            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions = clean_flow_buffer(
+            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, counts = clean_flow_buffer(
                 tracked_flow_ids,
                 tracked_flow_packets,
                 tracked_flow_pkt_flags,
                 tracked_flow_directions,
                 t
             )
-            step_flow_ids = []
+            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
+            flows.extend(features)
             t = int(pkt[0]) + step
+            counts_total = [ct + c for ct,c in zip(counts_total, counts)]
         id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
         reverse_id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
-        if id not in step_flow_ids and reverse_id not in step_flow_ids:
-            step_flow_ids.append(id)
         if id not in tracked_flow_ids and reverse_id not in tracked_flow_ids:
             tracked_flow_ids.append(id)
             tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
