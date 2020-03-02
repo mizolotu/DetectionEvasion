@@ -3,12 +3,10 @@ import os.path as osp
 import numpy as np
 
 from time import time
-from queue import Queue
 from enum import Enum
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from socket import inet_ntop, AF_INET
 from data_proc import find_data_files
-from threading import Thread
 
 
 class DnsPacket(KaitaiStruct):
@@ -1361,7 +1359,7 @@ def decode_tcp_flags_value(value):
 
 def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
 
-    # src_ip-src_port-dst_ip-dst_port-protocol
+    # flow id = src_ip-src_port-dst_ip-dst_port-protocol
 
     # 0 - timestamp
     # 1 - total size
@@ -1842,7 +1840,7 @@ def calculate_features_(idx, bulk_thr=1.0, idle_thr=5.0):
 
 def label_flow(flow_id):
     if '18.218.115.60' in flow_id and '-6' in flow_id:
-        label = 1  # web brute-force
+        label = 1  # 2202 brute-force
     else:
         label = 0
     return label
@@ -1872,67 +1870,57 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
             flow_dirs_new.append(fd)
     return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, [count_tcp, count_not_tcp, count_time]
 
-def extract_flows(pkt_file, ips_to_look_for, step=1.0):
+def extract_flows(pkt_file, step=1.0):
 
     p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False, header=None)
     pkts = p.values
     unique_ips = list(set(pkts[:,1]))
     unique_ips.extend(pkts[:, 3])
     unique_ips = list(set(unique_ips))
-    if len(ips_to_look_for) > 0:
-        process = False
-        for ip in ips_to_look_for:
-            if ip in unique_ips:
-                process = True
-                break
-    else:
-        process = True
-
     flows = []
-    if process:
-        tracked_flow_ids = []
-        tracked_flow_packets = []
-        tracked_flow_pkt_flags = []
-        tracked_flow_directions = []
-        timeline = np.hstack([pkt[0] for pkt in pkts])
-        time_min = np.floor(np.min(timeline))
-        id_idx = np.array([1, 2, 3, 4, 5])
-        reverse_id_idx = np.array([3, 4, 1, 2, 5])
-        t = time_min + step
-        counts_total = [0, 0, 0]
+    tracked_flow_ids = []
+    tracked_flow_packets = []
+    tracked_flow_pkt_flags = []
+    tracked_flow_directions = []
+    timeline = np.hstack([pkt[0] for pkt in pkts])
+    time_min = np.floor(np.min(timeline))
+    id_idx = np.array([1, 2, 3, 4, 5])
+    reverse_id_idx = np.array([3, 4, 1, 2, 5])
+    t = time_min + step
+    counts_total = [0, 0, 0]
 
-        # main loop
+    # main loop
 
-        for i, pkt in enumerate(pkts):
-            if pkt[0] > t or i == len(pkts) - 1:
-                tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, counts = clean_flow_buffer(
-                    tracked_flow_ids,
-                    tracked_flow_packets,
-                    tracked_flow_pkt_flags,
-                    tracked_flow_directions,
-                    t
-                )
-                features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
-                flows.extend(features)
-                t = int(pkt[0]) + step
-                counts_total = [ct + c for ct, c in zip(counts_total, counts)]
-            id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
-            reverse_id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
-            if id not in tracked_flow_ids and reverse_id not in tracked_flow_ids:
-                tracked_flow_ids.append(id)
-                tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
-                tracked_flow_pkt_flags.append([pkt[8]])
-                tracked_flow_directions.append([1])
+    for i, pkt in enumerate(pkts):
+        if pkt[0] > t or i == len(pkts) - 1:
+            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, counts = clean_flow_buffer(
+                tracked_flow_ids,
+                tracked_flow_packets,
+                tracked_flow_pkt_flags,
+                tracked_flow_directions,
+                t
+            )
+            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
+            flows.extend(features)
+            t = int(pkt[0]) + step
+            counts_total = [ct + c for ct, c in zip(counts_total, counts)]
+        id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
+        reverse_id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
+        if id not in tracked_flow_ids and reverse_id not in tracked_flow_ids:
+            tracked_flow_ids.append(id)
+            tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
+            tracked_flow_pkt_flags.append([pkt[8]])
+            tracked_flow_directions.append([1])
+        else:
+            if id in tracked_flow_ids:
+                direction = 1
+                idx = tracked_flow_ids.index(id)
             else:
-                if id in tracked_flow_ids:
-                    direction = 1
-                    idx = tracked_flow_ids.index(id)
-                else:
-                    direction = -1
-                    idx = tracked_flow_ids.index(reverse_id)
-                tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
-                tracked_flow_pkt_flags[idx].append(pkt[8])
-                tracked_flow_directions[idx].append(direction)
+                direction = -1
+                idx = tracked_flow_ids.index(reverse_id)
+            tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
+            tracked_flow_pkt_flags[idx].append(pkt[8])
+            tracked_flow_directions[idx].append(direction)
 
     return flows
 
@@ -1943,9 +1931,9 @@ if __name__ == '__main__':
     mode = sys.argv[1]
     main_dir = sys.argv[2]
     if len(sys.argv) == 4:
-        look_for_ips = sys.argv[3].split(',')
+        subnets = sys.argv[3].split(',')
     else:
-        look_for_ips = []
+        subnets = None
 
     # dirs
 
@@ -1982,15 +1970,23 @@ if __name__ == '__main__':
         result_sub_dir = osp.join(result_dir, input_subdir_name)
         if not osp.exists(result_sub_dir): os.makedirs(result_sub_dir)
         for i,input_file in enumerate(inputs):
-            print(i, input_file)
             result_file = osp.join(result_sub_dir, osp.basename(input_file))
-            if mode == 'pcaps-packets':
-                results = read_pcap(input_file)
-            elif mode == 'packets-flows':
-                t_start = time()
-                results = extract_flows(input_file, look_for_ips)
-                labels = np.array([line[-1] for line in results])
-                print(time() - t_start, len(labels), np.sum(labels))
+            if subnets is not None:
+                process_file = False
+                for subnet in subnets:
+                    if subnet in input_file:
+                        process_file = True
+                        break
+            else:
+                process_file = True
+            print(i, input_file, process_file)
+            if process_file:
+                if mode == 'pcaps-packets':
+                    results = read_pcap(input_file)
+                elif mode == 'packets-flows':
+                    results = extract_flows(input_file)
+            else:
+                results = []
             if len(results) > 0:
                 lines = [','.join([str(item) for item in result]) for result in results]
                 with open(result_file, 'w') as f:
