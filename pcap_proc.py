@@ -1309,7 +1309,7 @@ class Pcap(KaitaiStruct):
                 self.body = self._io.read_bytes(self.incl_len)
 
 
-def read_pcap(pcap_file):
+def read_pcap(pcap_file, ports=None):
     sniffer = pcap.pcap(pcap_file)
     count = 0
     pkts = []
@@ -1347,7 +1347,11 @@ def read_pcap(pcap_file):
                         decode_tcp_flags_value(flags),
                         window
                     ]
-                    pkts.append(fields)
+                    if ports is not None:
+                        if src_port in ports or dst_port in ports:
+                            pkts.append(fields)
+                    else:
+                        pkts.append(fields)
         except:
             pass
     return pkts
@@ -1942,10 +1946,12 @@ if __name__ == '__main__':
 
     mode = sys.argv[1]
     main_dir = sys.argv[2]
-    if len(sys.argv) == 4:
+    if len(sys.argv) == 5:
         subnets = sys.argv[3].split(',')
+        ports = sys.argv[4].split(',')
     else:
         subnets = None
+        ports = None
 
     # dirs
 
@@ -1994,9 +2000,9 @@ if __name__ == '__main__':
             print(i, input_file, process_file)
             if process_file:
                 if mode == 'pcaps-packets':
-                    results = read_pcap(input_file)
+                    results = read_pcap(input_file, ports)
                 elif mode == 'packets-flows':
-                    results = extract_flows(input_file)
+                    results = extract_flows(input_file, ports)
             else:
                 results = []
             if len(results) > 0:
