@@ -27,7 +27,7 @@ def extract_values(data_file, minus_ids=[67, 68]):
 
     # look for http data
 
-    http_idx = np.where(v[:, 0] == 80 | v[:, 0] == 443)[0]
+    http_idx = np.where((v[:, 0] == 80) | (v[:, 0] == 443))[0]
 
     # substitute minus ones with zeroes in columns minus_ids
 
