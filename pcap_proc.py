@@ -1384,227 +1384,233 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         activity_start_idx = np.hstack([0, idle_idx])
         activity_end_idx = np.hstack([idle_idx - 1, len(pkts) - 1])
 
-        # forward packets
+        # forward and backward packets
 
         fw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d > 0])
-        fw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d > 0])
-        if len(fw_pkts) > 1:
-            fwt = np.zeros(len(fw_pkts))
-            fwt[1:] = fw_pkts[1:, 0] - fw_pkts[:-1, 0]
-            fw_blk_idx = np.where(fwt <= bulk_thr)[0]
-            fw_bulk = fw_pkts[fw_blk_idx, :]
-            fw_blk_dur = np.sum(fwt[fw_blk_idx])
-        elif len(fw_pkts) == 1:
-            fw_bulk = [fw_pkts[0, :]]
-            fw_blk_dur = 0
-        else:
-            fw_bulk = []
-            fw_blk_dur = 0
-        fw_bulk = np.array(fw_bulk)
-
-        # backward packets
-
         bw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
-        bw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d < 0])
-        if len(bw_pkts) > 1:
-            bwt = np.zeros(len(bw_pkts))
-            bwt[1:] = bw_pkts[1:, 0] - bw_pkts[:-1, 0]
-            bw_blk_idx = np.where(bwt <= bulk_thr)[0]
-            bw_bulk = bw_pkts[bw_blk_idx, :]
-            bw_blk_dur = np.sum(bwt[bw_blk_idx])
-        elif len(bw_pkts) == 1:
-            bw_bulk = [bw_pkts[0, :]]
-            bw_blk_dur = 0
-        else:
-            bw_bulk = []
-            bw_blk_dur = 0
-        bw_bulk = np.array(bw_bulk)
 
-        # calculate features
+        if len(fw_pkts) >= 2 and len(bw_pkts) > 1: # forward SYN, backward SYN-ACK, forward ACK
 
-        is_icmp = 1 if flow_id.endswith('0') else 0
-        is_tcp = 1 if flow_id.endswith('6') else 0
-        is_udp = 1 if flow_id.endswith('17') else 0
+            # forward and backward flags
 
-        fl_dur = pkts[-1, 0] - pkts[0, 0]
-        tot_fw_pk = len(fw_pkts)
-        tot_bw_pk = len(bw_pkts)
-        tot_l_fw_pkt = np.sum(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+            fw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d > 0])
+            bw_flags = ''.join([str(fl) for fl, d in zip(pkt_flag_list, pkt_dirs) if d < 0])
 
-        fw_pkt_l_max = np.max(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
-        fw_pkt_l_min = np.min(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
-        fw_pkt_l_avg = np.mean(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
-        fw_pkt_l_std = np.std(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+            # forward and backward bulks
 
-        bw_pkt_l_max = np.max(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
-        bw_pkt_l_min = np.min(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
-        bw_pkt_l_avg = np.mean(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
-        bw_pkt_l_std = np.std(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+            if len(fw_pkts) > 1:
+                fwt = np.zeros(len(fw_pkts))
+                fwt[1:] = fw_pkts[1:, 0] - fw_pkts[:-1, 0]
+                fw_blk_idx = np.where(fwt <= bulk_thr)[0]
+                fw_bulk = fw_pkts[fw_blk_idx, :]
+                fw_blk_dur = np.sum(fwt[fw_blk_idx])
+            elif len(fw_pkts) == 1:
+                fw_bulk = [fw_pkts[0, :]]
+                fw_blk_dur = 0
+            else:
+                fw_bulk = []
+                fw_blk_dur = 0
+            fw_bulk = np.array(fw_bulk)
 
-        fl_byt_s = np.sum(pkts[:, 1]) / fl_dur if fl_dur > 0 else -1
-        fl_pkt_s = len(pkts) / fl_dur if fl_dur > 0 else -1
+            if len(bw_pkts) > 1:
+                bwt = np.zeros(len(bw_pkts))
+                bwt[1:] = bw_pkts[1:, 0] - bw_pkts[:-1, 0]
+                bw_blk_idx = np.where(bwt <= bulk_thr)[0]
+                bw_bulk = bw_pkts[bw_blk_idx, :]
+                bw_blk_dur = np.sum(bwt[bw_blk_idx])
+            elif len(bw_pkts) == 1:
+                bw_bulk = [bw_pkts[0, :]]
+                bw_blk_dur = 0
+            else:
+                bw_bulk = []
+                bw_blk_dur = 0
+            bw_bulk = np.array(bw_bulk)
 
-        fl_iat_avg = np.mean(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
-        fl_iat_std = np.std(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
-        fl_iat_max = np.max(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
-        fl_iat_min = np.min(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+            # calculate features
 
-        fw_iat_tot = np.sum(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
-        fw_iat_avg = np.mean(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
-        fw_iat_std = np.std(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
-        fw_iat_max = np.max(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
-        fw_iat_min = np.min(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+            is_icmp = 1 if flow_id.endswith('0') else 0
+            is_tcp = 1 if flow_id.endswith('6') else 0
+            is_udp = 1 if flow_id.endswith('17') else 0
 
-        bw_iat_tot = np.sum(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
-        bw_iat_avg = np.mean(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
-        bw_iat_std = np.std(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
-        bw_iat_max = np.max(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
-        bw_iat_min = np.min(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+            fl_dur = pkts[-1, 0] - pkts[0, 0]
+            tot_fw_pk = len(fw_pkts)
+            tot_bw_pk = len(bw_pkts)
+            tot_l_fw_pkt = np.sum(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
 
-        fw_psh_flag = fw_flags.count('3') if len(fw_flags) > 0 else 0
-        bw_psh_flag = bw_flags.count('3') if len(fw_flags) > 0 else 0
-        fw_urg_flag = fw_flags.count('5') if len(bw_flags) > 0 else 0
-        bw_urg_flag = bw_flags.count('5') if len(bw_flags) > 0 else 0
+            fw_pkt_l_max = np.max(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+            fw_pkt_l_min = np.min(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+            fw_pkt_l_avg = np.mean(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
+            fw_pkt_l_std = np.std(fw_pkts[:, 1]) if len(fw_pkts) > 0 else 0
 
-        fw_hdr_len = np.sum(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
-        bw_hdr_len = np.sum(bw_pkts[:, 2]) if len(bw_pkts) > 0 else 0
+            bw_pkt_l_max = np.max(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+            bw_pkt_l_min = np.min(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+            bw_pkt_l_avg = np.mean(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
+            bw_pkt_l_std = np.std(bw_pkts[:, 1]) if len(bw_pkts) > 0 else 0
 
-        if len(fw_pkts) > 0:
-            fw_dur = fw_pkts[-1, 0] - fw_pkts[0, 0]
-            fw_pkt_s = len(fw_pkts) / fw_dur if fw_dur > 0 else -1
-        else:
-            fw_pkt_s = 0
-        if len(bw_pkts) > 0:
-            bw_dur = bw_pkts[-1, 0] - bw_pkts[0, 0]
-            bw_pkt_s = len(bw_pkts) / bw_dur if bw_dur > 0 else -1
-        else:
-            bw_pkt_s = 0
+            fl_byt_s = np.sum(pkts[:, 1]) / fl_dur if fl_dur > 0 else -1
+            fl_pkt_s = len(pkts) / fl_dur if fl_dur > 0 else -1
 
-        pkt_len_min = np.min(pkts[:, 1])
-        pkt_len_max = np.max(pkts[:, 1])
-        pkt_len_avg = np.mean(pkts[:, 1])
-        pkt_len_std = np.std(pkts[:, 1])
+            fl_iat_avg = np.mean(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+            fl_iat_std = np.std(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+            fl_iat_max = np.max(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
+            fl_iat_min = np.min(pkts[1:, 0] - pkts[:-1, 0]) if len(pkts) > 1 else 0
 
-        fin_cnt = flags.count('0')
-        syn_cnt = flags.count('1')
-        rst_cnt = flags.count('2')
-        psh_cnt = flags.count('3')
-        ack_cnt = flags.count('4')
-        urg_cnt = flags.count('5')
-        cwe_cnt = flags.count('6')
-        ece_cnt = flags.count('7')
+            fw_iat_tot = np.sum(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+            fw_iat_avg = np.mean(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+            fw_iat_std = np.std(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+            fw_iat_max = np.max(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
+            fw_iat_min = np.min(fw_pkts[1:, 0] - fw_pkts[:-1, 0]) if len(fw_pkts) > 1 else 0
 
-        down_up_ratio = len(bw_pkts) / len(fw_pkts) if len(fw_pkts) > 0 else -1
+            bw_iat_tot = np.sum(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+            bw_iat_avg = np.mean(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+            bw_iat_std = np.std(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+            bw_iat_max = np.max(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
+            bw_iat_min = np.min(bw_pkts[1:, 0] - bw_pkts[:-1, 0]) if len(bw_pkts) > 1 else 0
 
-        fw_byt_blk_avg = np.mean(fw_bulk[:, 1]) if len(fw_bulk) > 0 else 0
-        fw_pkt_blk_avg = len(fw_bulk)
-        fw_blk_rate_avg = np.sum(fw_bulk[:, 1]) / fw_blk_dur if fw_blk_dur > 0 else -1
-        bw_byt_blk_avg = np.mean(bw_bulk[:, 1]) if len(bw_bulk) > 0 else 0
-        bw_pkt_blk_avg = len(bw_bulk)
-        bw_blk_rate_avg = np.sum(bw_bulk[:, 1]) / bw_blk_dur if bw_blk_dur > 0 else -1
+            fw_psh_flag = fw_flags.count('3') if len(fw_flags) > 0 else 0
+            bw_psh_flag = bw_flags.count('3') if len(fw_flags) > 0 else 0
+            fw_urg_flag = fw_flags.count('5') if len(bw_flags) > 0 else 0
+            bw_urg_flag = bw_flags.count('5') if len(bw_flags) > 0 else 0
 
-        subfl_fw_pk = len(fw_pkts) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
-        subfl_fw_byt = np.sum(fw_pkts[:, 1]) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
-        subfl_bw_pk = len(bw_pkts) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
-        subfl_bw_byt = np.sum(bw_pkts[:, 1]) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
+            fw_hdr_len = np.sum(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
+            bw_hdr_len = np.sum(bw_pkts[:, 2]) if len(bw_pkts) > 0 else 0
 
-        fw_win_byt = fw_pkts[0, 3] if len(fw_pkts) > 0 else 0
-        bw_win_byt = bw_pkts[0, 3] if len(bw_pkts) > 0 else 0
+            if len(fw_pkts) > 0:
+                fw_dur = fw_pkts[-1, 0] - fw_pkts[0, 0]
+                fw_pkt_s = len(fw_pkts) / fw_dur if fw_dur > 0 else -1
+            else:
+                fw_pkt_s = 0
+            if len(bw_pkts) > 0:
+                bw_dur = bw_pkts[-1, 0] - bw_pkts[0, 0]
+                bw_pkt_s = len(bw_pkts) / bw_dur if bw_dur > 0 else -1
+            else:
+                bw_pkt_s = 0
 
-        fw_act_pkt = len([pkt for pkt in fw_pkts if is_tcp == 1 and pkt[1] > pkt[2]])
-        fw_seg_min = np.min(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
+            pkt_len_min = np.min(pkts[:, 1])
+            pkt_len_max = np.max(pkts[:, 1])
+            pkt_len_avg = np.mean(pkts[:, 1])
+            pkt_len_std = np.std(pkts[:, 1])
 
-        atv_avg = np.mean(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
-        atv_std = np.std(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
-        atv_max = np.max(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
-        atv_min = np.min(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+            fin_cnt = flags.count('0')
+            syn_cnt = flags.count('1')
+            rst_cnt = flags.count('2')
+            psh_cnt = flags.count('3')
+            ack_cnt = flags.count('4')
+            urg_cnt = flags.count('5')
+            cwe_cnt = flags.count('6')
+            ece_cnt = flags.count('7')
 
-        idl_avg = np.mean(dt[idle_idx]) if len(idle_idx) > 0 else 0
-        idl_std = np.std(dt[idle_idx]) if len(idle_idx) > 0 else 0
-        idl_max = np.max(dt[idle_idx]) if len(idle_idx) > 0 else 0
-        idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
+            down_up_ratio = len(bw_pkts) / len(fw_pkts) if len(fw_pkts) > 0 else -1
 
-        label = label_flow(flow_id, pkt_list[0][0])
+            fw_byt_blk_avg = np.mean(fw_bulk[:, 1]) if len(fw_bulk) > 0 else 0
+            fw_pkt_blk_avg = len(fw_bulk)
+            fw_blk_rate_avg = np.sum(fw_bulk[:, 1]) / fw_blk_dur if fw_blk_dur > 0 else -1
+            bw_byt_blk_avg = np.mean(bw_bulk[:, 1]) if len(bw_bulk) > 0 else 0
+            bw_pkt_blk_avg = len(bw_bulk)
+            bw_blk_rate_avg = np.sum(bw_bulk[:, 1]) / bw_blk_dur if bw_blk_dur > 0 else -1
 
-        # append to the feature list
+            subfl_fw_pk = len(fw_pkts) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
+            subfl_fw_byt = np.sum(fw_pkts[:, 1]) / (len(fw_pkts) - len(fw_bulk)) if len(fw_pkts) - len(fw_bulk) > 0 else -1
+            subfl_bw_pk = len(bw_pkts) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
+            subfl_bw_byt = np.sum(bw_pkts[:, 1]) / (len(bw_pkts) - len(bw_bulk)) if len(bw_pkts) - len(bw_bulk) > 0 else -1
 
-        features.append([
-            is_icmp,
-            is_tcp,
-            is_udp,
-            fl_dur,
-            tot_fw_pk,
-            tot_bw_pk,
-            tot_l_fw_pkt,
-            fw_pkt_l_max,
-            fw_pkt_l_min,
-            fw_pkt_l_avg,
-            fw_pkt_l_std,
-            bw_pkt_l_max,
-            bw_pkt_l_min,
-            bw_pkt_l_avg,
-            bw_pkt_l_std,
-            fl_byt_s,
-            fl_pkt_s,
-            fl_iat_avg,
-            fl_iat_std,
-            fl_iat_max,
-            fl_iat_min,
-            fw_iat_tot,
-            fw_iat_avg,
-            fw_iat_std,
-            fw_iat_max,
-            fw_iat_min,
-            bw_iat_tot,
-            bw_iat_avg,
-            bw_iat_std,
-            bw_iat_max,
-            bw_iat_min,
-            fw_psh_flag,
-            bw_psh_flag,
-            fw_urg_flag,
-            bw_urg_flag,
-            fw_hdr_len,
-            bw_hdr_len,
-            fw_pkt_s,
-            bw_pkt_s,
-            pkt_len_min,
-            pkt_len_max,
-            pkt_len_avg,
-            pkt_len_std,
-            fin_cnt,
-            syn_cnt,
-            rst_cnt,
-            psh_cnt,
-            ack_cnt,
-            urg_cnt,
-            cwe_cnt,
-            ece_cnt,
-            down_up_ratio,
-            fw_byt_blk_avg,
-            fw_pkt_blk_avg,
-            fw_blk_rate_avg,
-            bw_byt_blk_avg,
-            bw_pkt_blk_avg,
-            bw_blk_rate_avg,
-            subfl_fw_pk,
-            subfl_fw_byt,
-            subfl_bw_pk,
-            subfl_bw_byt,
-            fw_win_byt,
-            bw_win_byt,
-            fw_act_pkt,
-            fw_seg_min,
-            atv_avg,
-            atv_std,
-            atv_max,
-            atv_min,
-            idl_avg,
-            idl_std,
-            idl_max,
-            idl_min,
-            label
-        ])
+            fw_win_byt = fw_pkts[0, 3] if len(fw_pkts) > 0 else 0
+            bw_win_byt = bw_pkts[0, 3] if len(bw_pkts) > 0 else 0
+
+            fw_act_pkt = len([pkt for pkt in fw_pkts if is_tcp == 1 and pkt[1] > pkt[2]])
+            fw_seg_min = np.min(fw_pkts[:, 2]) if len(fw_pkts) > 0 else 0
+
+            atv_avg = np.mean(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+            atv_std = np.std(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+            atv_max = np.max(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+            atv_min = np.min(pkts[activity_end_idx, 0] - pkts[activity_start_idx, 0])
+
+            idl_avg = np.mean(dt[idle_idx]) if len(idle_idx) > 0 else 0
+            idl_std = np.std(dt[idle_idx]) if len(idle_idx) > 0 else 0
+            idl_max = np.max(dt[idle_idx]) if len(idle_idx) > 0 else 0
+            idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
+
+            label = label_flow(flow_id, pkt_list[0][0])
+
+            # append to the feature list
+
+            features.append([
+                is_icmp,
+                is_tcp,
+                is_udp,
+                fl_dur,
+                tot_fw_pk,
+                tot_bw_pk,
+                tot_l_fw_pkt,
+                fw_pkt_l_max,
+                fw_pkt_l_min,
+                fw_pkt_l_avg,
+                fw_pkt_l_std,
+                bw_pkt_l_max,
+                bw_pkt_l_min,
+                bw_pkt_l_avg,
+                bw_pkt_l_std,
+                fl_byt_s,
+                fl_pkt_s,
+                fl_iat_avg,
+                fl_iat_std,
+                fl_iat_max,
+                fl_iat_min,
+                fw_iat_tot,
+                fw_iat_avg,
+                fw_iat_std,
+                fw_iat_max,
+                fw_iat_min,
+                bw_iat_tot,
+                bw_iat_avg,
+                bw_iat_std,
+                bw_iat_max,
+                bw_iat_min,
+                fw_psh_flag,
+                bw_psh_flag,
+                fw_urg_flag,
+                bw_urg_flag,
+                fw_hdr_len,
+                bw_hdr_len,
+                fw_pkt_s,
+                bw_pkt_s,
+                pkt_len_min,
+                pkt_len_max,
+                pkt_len_avg,
+                pkt_len_std,
+                fin_cnt,
+                syn_cnt,
+                rst_cnt,
+                psh_cnt,
+                ack_cnt,
+                urg_cnt,
+                cwe_cnt,
+                ece_cnt,
+                down_up_ratio,
+                fw_byt_blk_avg,
+                fw_pkt_blk_avg,
+                fw_blk_rate_avg,
+                bw_byt_blk_avg,
+                bw_pkt_blk_avg,
+                bw_blk_rate_avg,
+                subfl_fw_pk,
+                subfl_fw_byt,
+                subfl_bw_pk,
+                subfl_bw_byt,
+                fw_win_byt,
+                bw_win_byt,
+                fw_act_pkt,
+                fw_seg_min,
+                atv_avg,
+                atv_std,
+                atv_max,
+                atv_min,
+                idl_avg,
+                idl_std,
+                idl_max,
+                idl_min,
+                label
+            ])
 
     return features
 
@@ -1859,7 +1865,7 @@ def label_flow(flow_id, ts):
         label = 0
     return label
 
-def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_time, idle_thr=5.0, tcp_duration_thr=60.0):
+def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_time, idle_thr=5.0, tcp_duration_thr=np.inf):
     flow_ids_new = []
     flow_pkts_new = []
     flow_pkt_flags_new = []
@@ -1948,7 +1954,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
                 tracked_flow_packets.append([np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]])])
                 tracked_flow_pkt_flags.append([pkt[flag_idx]])
                 tracked_flow_directions.append([direction])
-            elif id is not None:
+            elif id is not None and id in tracked_flow_ids:
                 idx = tracked_flow_ids.index(id)
                 tracked_flow_packets[idx].append(np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]]))
                 tracked_flow_pkt_flags[idx].append(pkt[flag_idx])
@@ -2015,9 +2021,9 @@ if __name__ == '__main__':
             print(i, input_file, process_file)
             if process_file:
                 if mode == 'pcaps-packets':
-                    results = read_pcap(input_file, ports)
+                    results = read_pcap(input_file, ports=ports)
                 elif mode == 'packets-flows':
-                    results = extract_flows(input_file, ports)
+                    results = extract_flows(input_file, ports=ports)
             else:
                 results = []
             if len(results) > 0:
