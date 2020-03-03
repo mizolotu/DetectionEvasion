@@ -1844,9 +1844,17 @@ def calculate_features_(idx, bulk_thr=1.0, idle_thr=5.0):
 
 def label_flow(flow_id, ts):
     timestamp = datetime.fromtimestamp(ts)
-    print(timestamp.strftime('%m-%d'))
-    if '18.218.115.60' in flow_id and '-6' in flow_id:
-        label = 1  # 2202 brute-force
+    date = timestamp.strftime('%m-%d')
+    if '18.219.211.138' in flow_id and '-6' in flow_id and date == '15-02': # DoS-GoldenEye
+        label = 1
+    elif '18.217.165.70' in flow_id and '-6' in flow_id and date == '15-02': # DoS-Slowloris
+        label = 2
+    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '16-02': # DoS-SlowHTTPTest
+        label = 3
+    elif '18.219.193.20' in flow_id and '-6' in flow_id and date == '16-02': # DoS-Hulk
+        label = 4
+    elif '18.218.115.60' in flow_id and '-6' in flow_id and date in ['22-02', '23-02']: # BruteForce-Web
+        label = 5
     else:
         label = 0
     return label
@@ -1876,7 +1884,7 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
             flow_dirs_new.append(fd)
     return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, [count_tcp, count_not_tcp, count_time]
 
-def extract_flows(pkt_file, step=1.0, ports=[80, 443]):
+def extract_flows(pkt_file, step=1.0, ports=None):
 
     p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False, header=None)
     pkts = p.values
@@ -1889,24 +1897,28 @@ def extract_flows(pkt_file, step=1.0, ports=[80, 443]):
     timeline = np.hstack([pkt[0] for pkt in pkts])
     time_min = np.floor(np.min(timeline))
 
+    timestep_idx = 0
     src_ip_idx = 1
     src_port_idx = 2
     dst_ip_idx = 3
     dst_port_idx = 4
     proto_idx = 5
+    size_idx = 6
+    header_idx = 7
+    flag_idx = 8
+    window_idx = 9
     id_idx = [src_ip_idx, src_port_idx, dst_ip_idx, dst_port_idx, proto_idx]
     reverse_id_idx = [dst_ip_idx, dst_port_idx, src_ip_idx, src_port_idx, proto_idx]
 
     t = time_min + step
     counts_total = [0, 0, 0]
-    if 'UCAP' in pkt_file:
-        dst = pkt_file.split('UCAP')[-1]
-    elif '-' in pkt_file:
-        dst = pkt_file.split('-')[-1]
 
     # main loop
 
     for i, pkt in enumerate(pkts):
+
+        # in case of new time window
+
         if pkt[0] > t or i == len(pkts) - 1:
             tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, counts = clean_flow_buffer(
                 tracked_flow_ids,
@@ -1919,24 +1931,27 @@ def extract_flows(pkt_file, step=1.0, ports=[80, 443]):
             flows.extend(features)
             t = int(pkt[0]) + step
             counts_total = [ct + c for ct, c in zip(counts_total, counts)]
-        if pkt[src_port_idx] in ports or pkt[dst_port_idx] in ports:
-            if pkt[dst_ip_idx] == dst:
+
+        # otherwise
+
+        if ports is not None and (pkt[src_port_idx] in ports or pkt[dst_port_idx] in ports):
+            if pkt[dst_port_idx] in ports:
                 id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
                 direction = 1
-            elif pkt[src_ip_idx] == dst:
+            elif pkt[src_port_idx] in ports:
                 id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
                 direction = -1
             else:
                 id = None
-            if id is not None and id not in tracked_flow_ids:
+            if id is not None and id not in tracked_flow_ids and pkt[flag_idx] == '1' and direction == 1: # SYN packet
                 tracked_flow_ids.append(id)
-                tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
-                tracked_flow_pkt_flags.append([pkt[8]])
+                tracked_flow_packets.append([np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]])])
+                tracked_flow_pkt_flags.append([pkt[flag_idx]])
                 tracked_flow_directions.append([direction])
             elif id is not None:
                 idx = tracked_flow_ids.index(id)
-                tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
-                tracked_flow_pkt_flags[idx].append(pkt[8])
+                tracked_flow_packets[idx].append(np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]]))
+                tracked_flow_pkt_flags[idx].append(pkt[flag_idx])
                 tracked_flow_directions[idx].append(direction)
     return flows
 
