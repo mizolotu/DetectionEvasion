@@ -1861,6 +1861,8 @@ def label_flow(flow_id, ts):
         label = 4
     elif '18.218.115.60' in flow_id and '-6' in flow_id and date in ['22-02', '23-02']: # BruteForce-Web
         label = 5
+    elif '18.219.211.138' in flow_id and '-6' in flow_id and date == '02-03':  # Bot
+        label = 6
     else:
         label = 0
     return label
