@@ -1948,7 +1948,7 @@ if __name__ == '__main__':
     main_dir = sys.argv[2]
     if len(sys.argv) == 5:
         subnets = sys.argv[3].split(',')
-        ports = sys.argv[4].split(',')
+        ports = [int(port) for port in sys.argv[4].split(',')]
     else:
         subnets = None
         ports = None
