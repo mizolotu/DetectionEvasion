@@ -2,7 +2,7 @@ import pcap, os, sys, pickle, pandas
 import os.path as osp
 import numpy as np
 
-from time import time
+from datetime import datetime
 from enum import Enum
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from socket import inet_ntop, AF_INET
@@ -1520,7 +1520,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         idl_max = np.max(dt[idle_idx]) if len(idle_idx) > 0 else 0
         idl_min = np.min(dt[idle_idx]) if len(idle_idx) > 0 else 0
 
-        label = label_flow(flow_id)
+        label = label_flow(flow_id, pkt_list[0][0])
 
         # append to the feature list
 
@@ -1838,7 +1838,9 @@ def calculate_features_(idx, bulk_thr=1.0, idle_thr=5.0):
         features_q.put(features)
         wcount += 1
 
-def label_flow(flow_id):
+def label_flow(flow_id, ts):
+    timestamp = datetime.fromtimestamp(ts)
+    print(timestamp.strftime('%m-%d'))
     if '18.218.115.60' in flow_id and '-6' in flow_id:
         label = 1  # 2202 brute-force
     else:
@@ -1870,13 +1872,11 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
             flow_dirs_new.append(fd)
     return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, [count_tcp, count_not_tcp, count_time]
 
-def extract_flows(pkt_file, step=1.0):
+def extract_flows(pkt_file, step=1.0, ports=[80, 443]):
 
     p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False, header=None)
     pkts = p.values
-    unique_ips = list(set(pkts[:,1]))
-    unique_ips.extend(pkts[:, 3])
-    unique_ips = list(set(unique_ips))
+
     flows = []
     tracked_flow_ids = []
     tracked_flow_packets = []
@@ -1884,10 +1884,21 @@ def extract_flows(pkt_file, step=1.0):
     tracked_flow_directions = []
     timeline = np.hstack([pkt[0] for pkt in pkts])
     time_min = np.floor(np.min(timeline))
-    id_idx = np.array([1, 2, 3, 4, 5])
-    reverse_id_idx = np.array([3, 4, 1, 2, 5])
+
+    src_ip_idx = 1
+    src_port_idx = 2
+    dst_ip_idx = 3
+    dst_port_idx = 4
+    proto_idx = 5
+    id_idx = [src_ip_idx, src_port_idx, dst_ip_idx, dst_port_idx, proto_idx]
+    reverse_id_idx = [dst_ip_idx, dst_port_idx, src_ip_idx, src_port_idx, proto_idx]
+
     t = time_min + step
     counts_total = [0, 0, 0]
+    if 'UCAP' in pkt_file:
+        dst = pkt_file.split('UCAP')[-1]
+    elif '-' in pkt_file:
+        dst = pkt_file.split('-')[-1]
 
     # main loop
 
@@ -1904,24 +1915,25 @@ def extract_flows(pkt_file, step=1.0):
             flows.extend(features)
             t = int(pkt[0]) + step
             counts_total = [ct + c for ct, c in zip(counts_total, counts)]
-        id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
-        reverse_id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
-        if id not in tracked_flow_ids and reverse_id not in tracked_flow_ids:
-            tracked_flow_ids.append(id)
-            tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
-            tracked_flow_pkt_flags.append([pkt[8]])
-            tracked_flow_directions.append([1])
-        else:
-            if id in tracked_flow_ids:
+        if pkt[src_port_idx] in ports or pkt[dst_port_idx] in ports:
+            if pkt[dst_ip_idx] == dst:
+                id = '-'.join([str(item) for item in [pkt[idx] for idx in id_idx]])
                 direction = 1
-                idx = tracked_flow_ids.index(id)
-            else:
+            elif pkt[src_ip_idx] == dst:
+                id = '-'.join([str(item) for item in [pkt[idx] for idx in reverse_id_idx]])
                 direction = -1
-                idx = tracked_flow_ids.index(reverse_id)
-            tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
-            tracked_flow_pkt_flags[idx].append(pkt[8])
-            tracked_flow_directions[idx].append(direction)
-
+            else:
+                id = None
+            if id is not None and id not in tracked_flow_ids:
+                tracked_flow_ids.append(id)
+                tracked_flow_packets.append([np.array([pkt[0], pkt[6], pkt[7], pkt[9]])])
+                tracked_flow_pkt_flags.append([pkt[8]])
+                tracked_flow_directions.append([direction])
+            elif id is not None:
+                idx = tracked_flow_ids.index(id)
+                tracked_flow_packets[idx].append(np.array([pkt[0], pkt[6], pkt[7], pkt[9]]))
+                tracked_flow_pkt_flags[idx].append(pkt[8])
+                tracked_flow_directions[idx].append(direction)
     return flows
 
 if __name__ == '__main__':
@@ -1996,32 +2008,33 @@ if __name__ == '__main__':
             if mode == 'packets-flows' and len(results) > 0:
                 flows = np.array(results)
                 idx = np.where(np.all(flows >= 0, axis=1) == True)[0]
-                x_min = np.min(flows[idx, :], axis=0)
-                x_max = np.max(flows[idx, :], axis=0)
-                x_mean = np.mean(flows[idx, :], axis=0)
-                x_std = np.std(flows[idx, :], axis=0)
-                n = flows.shape[0]
-                if X_min is None:
-                    X_min = x_min
-                else:
-                    X_min = np.min(np.vstack([x_min, X_min]), axis=0)
-                if X_max is None:
-                    X_max = x_max
-                else:
-                    X_max = np.max(np.vstack([x_max, X_max]), axis=0)
-                if X_mean is None and X_std is None:
-                    X_mean = x_mean
-                    X_std = x_std
-                    N = n
-                else:
-                    mu = (N * X_mean + n * x_mean) / (N + n)
-                    D = X_mean - mu
-                    d = x_mean - mu
-                    X_std = np.sqrt((N * (D ** 2 + X_std ** 2) + n * (d ** 2 + x_std ** 2)) / (N + n))
-                    N = N + n
-                    X_mean = mu
+                if len(idx) > 0:
+                    x_min = np.min(flows[idx, :], axis=0)
+                    x_max = np.max(flows[idx, :], axis=0)
+                    x_mean = np.mean(flows[idx, :], axis=0)
+                    x_std = np.std(flows[idx, :], axis=0)
+                    n = flows.shape[0]
+                    if X_min is None:
+                        X_min = x_min
+                    else:
+                        X_min = np.min(np.vstack([x_min, X_min]), axis=0)
+                    if X_max is None:
+                        X_max = x_max
+                    else:
+                        X_max = np.max(np.vstack([x_max, X_max]), axis=0)
+                    if X_mean is None and X_std is None:
+                        X_mean = x_mean
+                        X_std = x_std
+                        N = n
+                    else:
+                        mu = (N * X_mean + n * x_mean) / (N + n)
+                        D = X_mean - mu
+                        d = x_mean - mu
+                        X_std = np.sqrt((N * (D ** 2 + X_std ** 2) + n * (d ** 2 + x_std ** 2)) / (N + n))
+                        N = N + n
+                        X_mean = mu
 
-                # save stats
+                    # save stats
 
-                with open(flow_stats_file, 'wb') as f:
-                    pickle.dump([N, X_min, X_max, X_mean, X_std], f)
+                    with open(flow_stats_file, 'wb') as f:
+                        pickle.dump([N, X_min, X_max, X_mean, X_std], f)

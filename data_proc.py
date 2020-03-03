@@ -25,6 +25,10 @@ def extract_values(data_file, minus_ids=[67, 68]):
         v = np.delete(v, idx, 0)
         print('{0} rows have been deleted'.format(len(idx)))
 
+    # look for http data
+
+    http_idx = np.where(v[:, 0] == 80 | v[:, 0] == 443)[0]
+
     # substitute minus ones with zeroes in columns minus_ids
 
     for mi in minus_ids:
@@ -53,7 +57,7 @@ def extract_values(data_file, minus_ids=[67, 68]):
         values = np.delete(values, idx, 0)
         labels = np.delete(labels, idx)
 
-    print(values.shape, labels.shape, getsizeof(values))
+    print(data_file, values.shape, labels.shape, getsizeof(values), len(http_idx))
 
     return values, labels
 
@@ -141,7 +145,6 @@ if __name__ == '__main__':
         pp = []
         labels = []
         for data_file in data_files[0:n_data_files]:
-            print(data_file)
             values, labels = extract_values(data_file)
             for label in np.unique(labels):
                 nl = len(np.where(labels == label)[0])
