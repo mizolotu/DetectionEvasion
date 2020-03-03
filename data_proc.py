@@ -113,12 +113,12 @@ if __name__ == '__main__':
 
     # args
 
-    n_data_files = int(sys.argv[1])
-    tasks = sys.argv[2:]
+    data_dir = sys.argv[1]
+    n_data_files = int(sys.argv[2])
+    tasks = sys.argv[3:]
 
     # find data files
 
-    data_dir = 'data/cicids2018'
     data_files = find_data_files(data_dir, postfix='.csv')
     stats_file = 'stats.pkl'
     dataset_file = 'data{0}.pkl'
