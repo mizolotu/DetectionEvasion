@@ -120,6 +120,7 @@ if __name__ == '__main__':
     # find data files
 
     data_files = find_data_files(data_dir, postfix='.csv')
+    print(data_files)
     stats_file = 'stats.pkl'
     dataset_file = 'data{0}.pkl'
 
