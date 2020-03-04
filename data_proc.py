@@ -59,6 +59,11 @@ def extract_values(data_file, minus_ids=[67, 68]):
 
     print(data_file, values.shape, labels.shape, getsizeof(values), len(http_idx))
 
+    idx = np.where(labels == 'DoS attacks-SlowHTTPTest')[0]
+    print(np.mean(values[idx, :10]))
+    print(np.min(values[idx, :10]))
+    print(np.max(values[idx, :10]))
+
     return values, labels
 
 def one_hot_encode(values, categories):
