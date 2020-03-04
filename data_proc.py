@@ -60,9 +60,9 @@ def extract_values(data_file, minus_ids=[67, 68]):
     print(data_file, values.shape, labels.shape, getsizeof(values), len(http_idx))
 
     idx = np.where(labels == 'DoS attacks-SlowHTTPTest')[0]
-    print(np.mean(values[idx, :10]))
-    print(np.min(values[idx, :10]))
-    print(np.max(values[idx, :10]))
+    print(np.mean(values[idx, :10], axis=0))
+    print(np.min(values[idx, :10], axis=0))
+    print(np.max(values[idx, :10], axis=0))
 
     return values, labels
 
@@ -125,7 +125,6 @@ if __name__ == '__main__':
     # find data files
 
     data_files = find_data_files(data_dir, prefix='Friday-16-02-2018', postfix='.csv')
-    print(data_files)
     stats_file = 'stats.pkl'
     dataset_file = 'data{0}.pkl'
 
