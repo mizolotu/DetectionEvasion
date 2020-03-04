@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     # find data files
 
-    data_files = find_data_files(data_dir, prefix='data/cicids2018/prepared_for_ml/Friday-16-02-2018', postfix='.csv')
+    data_files = find_data_files(data_dir, prefix='Friday-16-02-2018', postfix='.csv')
     print(data_files)
     stats_file = 'stats.pkl'
     dataset_file = 'data{0}.pkl'
