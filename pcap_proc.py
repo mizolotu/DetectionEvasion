@@ -1313,6 +1313,7 @@ def read_pcap(pcap_file, ports=None):
     sniffer = pcap.pcap(pcap_file)
     count = 0
     pkts = []
+    payloads = []
     for timestamp, raw in sniffer:
         count += 1
         try:
@@ -1324,6 +1325,7 @@ def read_pcap(pcap_file, ports=None):
                 dst_port = 0
                 flags = 0
                 window = 0
+                payload = ''
                 proto = pkt.body.protocol
                 if proto in [0, 6, 17]:
                     frame_size = len(raw)
@@ -1335,6 +1337,7 @@ def read_pcap(pcap_file, ports=None):
                         if proto == 6:
                             flags = pkt.body.body.body.b13
                             window = pkt.body.body.body.window_size
+                            payload = pkt.body.body.body.body.decode('ascii','ignore')
                     fields = [
                         timestamp,
                         src_ip,
@@ -1350,11 +1353,13 @@ def read_pcap(pcap_file, ports=None):
                     if ports is not None:
                         if src_port in ports or dst_port in ports:
                             pkts.append(fields)
+                            payloads.append(payload)
                     else:
                         pkts.append(fields)
+                        payloads.append(payload)
         except:
             pass
-    return pkts
+    return pkts, payloads
 
 def decode_tcp_flags_value(value):
     b = '{0:b}'.format(value)[::-1]
@@ -1988,7 +1993,7 @@ if __name__ == '__main__':
         print('What?')
         sys.exit(1)
 
-    # dir with pcap files
+    # dir with input files
 
     input_subdir_names = []
     input_files = []
@@ -2023,7 +2028,7 @@ if __name__ == '__main__':
             print(i, input_file, process_file)
             if process_file:
                 if mode == 'pcaps-packets':
-                    results = read_pcap(input_file, ports=ports)
+                    results, _ = read_pcap(input_file, ports=ports)
                 elif mode == 'packets-flows':
                     results = extract_flows(input_file, ports=ports)
             else:
