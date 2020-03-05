@@ -18,13 +18,13 @@ if __name__ == '__main__':
     files = []
     for subdir in subdirs:
         files.extend(find_data_files(osp.join(dir, subdir)))
-    print(files)
 
     # generate dataset
 
     x = []
     y = []
     for fi,f in enumerate(files):
+        print(fi / len(files), f)
         p = pandas.read_csv(f, delimiter=',', dtype=float, header=None)
         v = p.values
         x.append(v[:, feature_inds])
