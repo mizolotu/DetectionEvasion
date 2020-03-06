@@ -35,7 +35,8 @@ if __name__ == '__main__':
             y = v[:, -1]
         print(x.shape, y.shape, sys.getsizeof(x))
     size = sys.getsizeof(x)
-    nchunks = size // 4e9
+    maxsize = 4e9
+    nchunks = int(size // maxsize) if size > maxsize else 1
     nsamples = x.shape[0]
     chunk_size = nsamples // nchunks
     for i in range(nchunks):
@@ -45,6 +46,6 @@ if __name__ == '__main__':
             idx = np.arange((i - 1) * chunk_size, i * chunk_size)
         print(len(idx))
         x_chunk = x[idx, :]
-        y_chunk = y[idx, :]
+        y_chunk = y[idx]
         with open(osp.join(dir, 'flows{0}.pkl'.format(i)), 'wb') as f:
-            pickle.dump(np.hstack([x_chunk, y_chunk]), f)
+            pickle.dump(np.hstack([x_chunk, y_chunk.reshape(-1, 1)]), f)
