@@ -1958,7 +1958,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
                 direction = -1
             else:
                 id = None
-            if id is not None and id not in tracked_flow_ids and '1' in pkt[flag_idx] and '4' not in pkt[flag_idx] and direction == 1: # SYN without ACK
+            if id is not None and id not in tracked_flow_ids and '1' in str(pkt[flag_idx]) and '4' not in str(pkt[flag_idx]) and direction == 1: # SYN without ACK
                 tracked_flow_ids.append(id)
                 tracked_flow_packets.append([np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]])])
                 tracked_flow_pkt_flags.append([pkt[flag_idx]])
