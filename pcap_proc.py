@@ -1855,18 +1855,20 @@ def calculate_features_(idx, bulk_thr=1.0, idle_thr=5.0):
 
 def label_flow(flow_id, ts):
     timestamp = datetime.fromtimestamp(ts)
-    date = timestamp.strftime('%m-%d')
-    if '18.219.211.138' in flow_id and '-6' in flow_id and date == '15-02': # DoS-GoldenEye
+    date = timestamp.strftime('%d%m')
+    # print(flow_id, date)
+    if '18.219.211.138' in flow_id and '-6' in flow_id and date == '1502': # DoS-GoldenEye
         label = 1
-    elif '18.217.165.70' in flow_id and '-6' in flow_id and date == '15-02': # DoS-Slowloris
+    elif '18.217.165.70' in flow_id and '-6' in flow_id and date == '1502': # DoS-Slowloris
         label = 2
-    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '16-02': # DoS-SlowHTTPTest
+    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '1602': # DoS-SlowHTTPTest
         label = 3
-    elif '18.219.193.20' in flow_id and '-6' in flow_id and date == '16-02': # DoS-Hulk
+    elif '18.219.193.20' in flow_id and '-6' in flow_id and date == '1602': # DoS-Hulk
         label = 4
-    elif '18.218.115.60' in flow_id and '-6' in flow_id and date in ['22-02', '23-02']: # BruteForce-Web
+    elif '18.218.115.60' in flow_id and '-6' in flow_id and date in ['2202', '2302']: # BruteForce-Web
         label = 5
-    elif '18.219.211.138' in flow_id and '-6' in flow_id and date == '02-03':  # Bot
+        print('Brute Force')
+    elif '18.219.211.138' in flow_id and '-6' in flow_id and date == '0203':  # Bot
         label = 6
     else:
         label = 0
@@ -1956,7 +1958,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
                 direction = -1
             else:
                 id = None
-            if id is not None and id not in tracked_flow_ids and pkt[flag_idx] == '1' and direction == 1: # SYN packet
+            if id is not None and id not in tracked_flow_ids and '1' in pkt[flag_idx] and '4' not in pkt[flag_idx] and direction == 1: # SYN without ACK
                 tracked_flow_ids.append(id)
                 tracked_flow_packets.append([np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]])])
                 tracked_flow_pkt_flags.append([pkt[flag_idx]])
