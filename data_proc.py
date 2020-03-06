@@ -78,7 +78,7 @@ def one_hot_encode(values, categories):
 def load_dataset(data_dir, data_file_prefix, data_file_postfix, tvt=[0.4,0.2,0.4]):
     data_files = find_data_files(data_dir, data_file_prefix, data_file_postfix)
     X, Y = None, None
-    for data_file in data_files[:1]: # remove [:1] later
+    for data_file in data_files[:3]: # remove [:1] later
         print(data_file)
         with open(data_file, 'rb') as f:
             XY = pickle.load(f)

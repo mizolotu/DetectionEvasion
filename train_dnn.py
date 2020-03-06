@@ -75,10 +75,10 @@ if __name__ == '__main__':
                 model = create_model(nfeatures, nl, nh, nn)
                 model.summary()
                 if nn == 2:
-                    h = model.fit(X_tr, B_tr, validation_data=(X_val, B_val), epochs=epochs, batch_size=batch_size, verbose=False, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
+                    h = model.fit(X_tr, B_tr, validation_data=(X_val, B_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
                     results = model.evaluate(X_te, B_te)
                 else:
-                    h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=False, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
+                    h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
                     results = model.evaluate(X_te, Y_te)
                 model.save_weights(model_checkpoint_path.format(nl, nh, nn))
                 metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()] + [str(r) for r in results])
