@@ -41,7 +41,7 @@ if __name__ == '__main__':
     chunk_size = nsamples // nchunks
     for i in range(nchunks):
         if i == nchunks - 1:
-            idx = np.arange((i - 1) * chunk_size, nsamples - 1)
+            idx = np.arange(i * chunk_size, nsamples - 1)
         else:
             idx = np.arange((i - 1) * chunk_size, i * chunk_size)
         print(len(idx))
