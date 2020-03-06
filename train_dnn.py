@@ -1,4 +1,3 @@
-import sys
 import tensorflow as tf
 import numpy as np
 
@@ -48,7 +47,7 @@ if __name__ == '__main__':
 
     # load data
 
-    X_tr, Y_tr, X_val, Y_val, X_te, Y_te = load_dataset('data/cicids2018', 'data', '.pkl', 'stats.pkl')
+    X_tr, Y_tr, X_val, Y_val, X_te, Y_te = load_dataset('data/flows', 'flows', '.pkl')
     nfeatures = X_tr.shape[1]
     nlabels = np.max(Y_tr) + 1
     print(X_tr.shape, Y_tr.shape, X_val.shape, Y_val.shape, X_te.shape, Y_te.shape)

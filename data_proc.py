@@ -75,30 +75,22 @@ def one_hot_encode(values, categories):
         oh[idx, c_idx] = 1
     return oh
 
-def load_dataset(data_dir, data_file_prefix, data_file_postfix, stats_file, tvt=[0.4,0.2,0.4]):
+def load_dataset(data_dir, data_file_prefix, data_file_postfix, tvt=[0.4,0.2,0.4]):
     data_files = find_data_files(data_dir, data_file_prefix, data_file_postfix)
-    data = []
+    X, Y = None, None
     for data_file in data_files:
         print(data_file)
         with open(data_file, 'rb') as f:
-            data.append(pickle.load(f))
-    data = np.vstack(data)
-    with open(osp.join(data_dir, stats_file), 'rb') as f:
-        stats = pickle.load(f)
-    ulabels = stats[0]
-    nfeatures = data.shape[1] - len(ulabels)
-    X, Y = [], []
-    for i in range(len(ulabels)):
-        lidx = ulabels.index(ulabels[i])
-        idx = np.where(data[:, nfeatures + lidx] == 1)[0]
-        X.append(data[idx, :nfeatures])
-        y = np.ones(len(idx)) * lidx
-        Y.append(y)
-    del data
-    X = np.vstack(X)
-    Y = np.hstack(Y)
-    nlabels = len(ulabels) - 1
+            XY = pickle.load(f)
+            nfeatures = XY.shape[0]
+            if X is not None and Y is not None:
+                X = np.vstack([X, XY[:, :nfeatures]])
+                Y = np.vstack([Y, XY[:, -1]])
+            else:
+                X = XY[:, :nfeatures]
+                Y = XY[:, -1]
     ready = False
+    nlabels = len(np.unique(Y))
     while not ready:
         idx = np.arange(X.shape[0])
         np.random.shuffle(idx)
@@ -110,7 +102,7 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, stats_file, tvt=
         Y_val = Y[int(tvt[0] * X.shape[0]) : int(np.sum(tvt[:2]) * X.shape[0])]
         X_te = X[int(np.sum(tvt[:2]) * X.shape[0]) : int(np.sum(tvt) * X.shape[0]), :]
         Y_te = Y[int(np.sum(tvt[:2]) * X.shape[0]) : int(np.sum(tvt) * X.shape[0])]
-        if np.max(Y_tr) == nlabels and np.max(Y_val) == nlabels and np.max(Y_te) == nlabels:
+        if len(np.unique(Y_tr)) == nlabels and len(np.unique(Y_val)) == nlabels and len(np.unique(Y_te)) == nlabels:
             ready = True
     return X_tr, Y_tr, X_val, Y_val, X_te, Y_te
 
