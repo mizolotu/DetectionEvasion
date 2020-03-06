@@ -104,6 +104,7 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, tvt=[0.4,0.2,0.4
         Y_te = Y[int(np.sum(tvt[:2]) * X.shape[0]) : int(np.sum(tvt) * X.shape[0])]
         if len(np.unique(Y_tr)) == nlabels and len(np.unique(Y_val)) == nlabels and len(np.unique(Y_te)) == nlabels:
             ready = True
+        print(np.unique(Y_tr), np.unique(Y_val), np.unique(Y_te))
     return X_tr, Y_tr, X_val, Y_val, X_te, Y_te
 
 if __name__ == '__main__':
