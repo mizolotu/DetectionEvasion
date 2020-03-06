@@ -36,7 +36,7 @@ if __name__ == '__main__':
         print(x.shape, y.shape, sys.getsizeof(x))
     size = sys.getsizeof(x)
     maxsize = 4e9
-    nchunks = int(size // maxsize) if size > maxsize else 1
+    nchunks = int(size // maxsize) + 1
     nsamples = x.shape[0]
     chunk_size = nsamples // nchunks
     for i in range(nchunks):
