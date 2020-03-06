@@ -21,14 +21,30 @@ if __name__ == '__main__':
 
     # generate dataset
 
-    x = []
-    y = []
+    x = None
+    y = None
     for fi,f in enumerate(files):
         print(fi / len(files), f)
         p = pandas.read_csv(f, delimiter=',', dtype=float, header=None)
         v = p.values
-        x.append(v[:, feature_inds])
-        y.append(v[:, -1])
-    x = np.vstack(x)
-    y = np.hstack(y)
-    print(x.shape, y.shape, sys.getsizeof(x))
+        if x is not None and y is not None:
+            x = np.vstack([x, v[:, feature_inds]])
+            y = np.hstack([y, v[:, -1]])
+        else:
+            x = v[:, feature_inds]
+            y = v[:, -1]
+        print(x.shape, y.shape, sys.getsizeof(x))
+    size = sys.getsizeof(x)
+    nchunks = size // 4e9
+    nsamples = x.shape[0]
+    chunk_size = nsamples // nchunks
+    for i in range(nchunks):
+        if i == nchunks - 1:
+            idx = np.arange((i - 1) * chunk_size, nsamples - 1)
+        else:
+            idx = np.arange((i - 1) * chunk_size, i * chunk_size)
+        print(len(idx))
+        x_chunk = x[idx, :]
+        y_chunk = y[idx, :]
+        with open(osp.join(dir, 'flows{0}.pkl'.format(i)), 'wb') as f:
+            pickle.dump(np.hstack([x_chunk, y_chunk]), f)
