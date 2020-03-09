@@ -79,9 +79,9 @@ class DeEnv(gym.Env):
     def _load_model(self, model_dir, prefix):
         model_score = 0
         model_name = ''
-        for sd in os.listdir(dir):
-            subdir = osp.join(dir, sd)
-            if osp.isdir(sd) and sd.startswith(osp.join(dir, prefix)):
+        for sd in os.listdir(model_dir):
+            subdir = osp.join(model_dir, sd)
+            if osp.isdir(sd) and sd.startswith(osp.join(model_dir, prefix)):
                 try:
                     with open(osp.join(subdir, 'metrics.txt'), 'r') as f:
                         line = f.readline()
