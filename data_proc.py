@@ -89,8 +89,20 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, tvt=[0.4,0.2,0.4
             else:
                 X = XY[:, :nfeatures]
                 Y = XY[:, -1]
+
+    # separate to train, validation and test chunks
+
+    L = np.unique(Y)
+    nlabels = len(L)
+    for i in range(nlabels):
+        print(L[i], len(np.where(Y == L[i])[0]))
+    Yu = np.zeros_like(Y)
+    for i in range(nlabels):
+        Yu[Y == L[i]] = i
+    Y = Yu.copy()
+    for i in range(nlabels):
+        print(i, len(np.where(Y == i)[0]))
     ready = False
-    nlabels = len(np.unique(Y))
     while not ready:
         idx = np.arange(X.shape[0])
         np.random.shuffle(idx)

@@ -1861,7 +1861,7 @@ def label_flow(flow_id, ts):
         label = 1
     elif '18.217.165.70' in flow_id and '-6' in flow_id and date == '1502': # DoS-Slowloris
         label = 2
-    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '1602': # DoS-SlowHTTPTest
+    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '1602': # DoS-SlowHTTPTest, there are no such packets actually
         label = 3
     elif '18.219.193.20' in flow_id and '-6' in flow_id and date == '1602': # DoS-Hulk
         label = 4
