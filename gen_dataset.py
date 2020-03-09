@@ -4,6 +4,12 @@ import numpy as np
 
 from data_proc import find_data_files
 
+def std_data(X, xmin, xmax):
+    nsamples = X.shape[0]
+    X = (X - np.ones((nsamples, 1)).dot(xmin.reshape(1, -1))) / np.ones((nsamples, 1)).dot((xmax - xmin).reshape(1, -1))
+    return X
+
+
 if __name__ == '__main__':
 
 
@@ -38,10 +44,10 @@ if __name__ == '__main__':
         p = pandas.read_csv(f, delimiter=',', dtype=float, header=None)
         v = p.values
         if x is not None and y is not None:
-            x = np.vstack([x, v[:, feature_inds]])
+            x = np.vstack([x, std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
             y = np.hstack([y, v[:, -1]])
         else:
-            x = v[:, feature_inds]
+            x = std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])
             y = v[:, -1]
         print(x.shape, y.shape, sys.getsizeof(x))
     size = sys.getsizeof(x)

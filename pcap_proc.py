@@ -1308,6 +1308,47 @@ class Pcap(KaitaiStruct):
             else:
                 self.body = self._io.read_bytes(self.incl_len)
 
+def read_iface(q, iface, port, ip):
+    sniffer = pcap.pcap(name=iface, timeout_ms=1)
+    while True:
+        timestamp, raw = next(sniffer)
+        try:
+            pkt = EthernetFrame(KaitaiStream(BytesIO(raw)))
+            if pkt.ether_type.value == 2048:
+                src_ip = inet_ntop(AF_INET, pkt.body.src_ip_addr)
+                dst_ip = inet_ntop(AF_INET, pkt.body.dst_ip_addr)
+                if src_ip == ip or dst_ip == ip:
+                    src_port = 0
+                    dst_port = 0
+                    flags = 0
+                    window = 0
+                    proto = pkt.body.protocol
+                    if proto in [0, 6, 17]:
+                        frame_size = len(raw)
+                        read_size = pkt.body.read_len
+                        payload_size = len(pkt.body.body.body.body)
+                        if proto in [6, 17]:
+                            src_port = pkt.body.body.body.src_port
+                            dst_port = pkt.body.body.body.dst_port
+                            if proto == 6:
+                                flags = pkt.body.body.body.b13
+                                window = pkt.body.body.body.window_size
+                        fields = [
+                            timestamp,
+                            src_ip,
+                            src_port,
+                            dst_ip,
+                            dst_port,
+                            proto,
+                            frame_size,
+                            14 + read_size - payload_size,
+                            decode_tcp_flags_value(flags),
+                            window
+                        ]
+                        if src_port == port or dst_port == port:
+                            q.append(fields)
+        except Exception as e:
+            print(e)
 
 def read_pcap(pcap_file, ports=None):
     sniffer = pcap.pcap(pcap_file)
@@ -1394,7 +1435,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
         fw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d > 0])
         bw_pkts = np.array([pkt for pkt, d in zip(pkt_list, pkt_dirs) if d < 0])
 
-        if len(fw_pkts) >= 2 and len(bw_pkts) > 1: # forward SYN, backward SYN-ACK, forward ACK
+        if len(fw_pkts) >= 2 and len(bw_pkts) >= 1: # forward SYN, backward SYN-ACK, forward ACK
 
             # forward and backward flags
 
@@ -1540,80 +1581,80 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
             # append to the feature list
 
             features.append([
-                is_icmp,
-                is_tcp,
-                is_udp,
-                fl_dur,
-                tot_fw_pk,
-                tot_bw_pk,
-                tot_l_fw_pkt,
-                fw_pkt_l_max,
-                fw_pkt_l_min,
-                fw_pkt_l_avg,
-                fw_pkt_l_std,
-                bw_pkt_l_max,
-                bw_pkt_l_min,
-                bw_pkt_l_avg,
-                bw_pkt_l_std,
-                fl_byt_s,
-                fl_pkt_s,
-                fl_iat_avg,
-                fl_iat_std,
-                fl_iat_max,
-                fl_iat_min,
-                fw_iat_tot,
-                fw_iat_avg,
-                fw_iat_std,
-                fw_iat_max,
-                fw_iat_min,
-                bw_iat_tot,
-                bw_iat_avg,
-                bw_iat_std,
-                bw_iat_max,
-                bw_iat_min,
-                fw_psh_flag,
-                bw_psh_flag,
-                fw_urg_flag,
-                bw_urg_flag,
-                fw_hdr_len,
-                bw_hdr_len,
-                fw_pkt_s,
-                bw_pkt_s,
-                pkt_len_min,
-                pkt_len_max,
-                pkt_len_avg,
-                pkt_len_std,
-                fin_cnt,
-                syn_cnt,
-                rst_cnt,
-                psh_cnt,
-                ack_cnt,
-                urg_cnt,
-                cwe_cnt,
-                ece_cnt,
-                down_up_ratio,
-                fw_byt_blk_avg,
-                fw_pkt_blk_avg,
-                fw_blk_rate_avg,
-                bw_byt_blk_avg,
-                bw_pkt_blk_avg,
-                bw_blk_rate_avg,
-                subfl_fw_pk,
-                subfl_fw_byt,
-                subfl_bw_pk,
-                subfl_bw_byt,
-                fw_win_byt,
-                bw_win_byt,
-                fw_act_pkt,
-                fw_seg_min,
-                atv_avg,
-                atv_std,
-                atv_max,
-                atv_min,
-                idl_avg,
-                idl_std,
-                idl_max,
-                idl_min,
+                is_icmp, # 0 -
+                is_tcp, # 1 -
+                is_udp, # 2 -
+                fl_dur, # 3
+                tot_fw_pk, # 4
+                tot_bw_pk, # 5
+                tot_l_fw_pkt, # 6
+                fw_pkt_l_max, # 7
+                fw_pkt_l_min, # 8
+                fw_pkt_l_avg, # 9
+                fw_pkt_l_std, # 10
+                bw_pkt_l_max, # 11
+                bw_pkt_l_min, # 12
+                bw_pkt_l_avg, # 13
+                bw_pkt_l_std, # 14
+                fl_byt_s, # 15
+                fl_pkt_s, # 16
+                fl_iat_avg, # 17
+                fl_iat_std, # 18
+                fl_iat_max, # 19
+                fl_iat_min, # 20
+                fw_iat_tot, # 21
+                fw_iat_avg, # 22
+                fw_iat_std, # 23
+                fw_iat_max, # 24
+                fw_iat_min, # 25
+                bw_iat_tot, # 26
+                bw_iat_avg, # 27
+                bw_iat_std, # 28
+                bw_iat_max, # 29
+                bw_iat_min, # 30
+                fw_psh_flag, # 31
+                bw_psh_flag, # 32
+                fw_urg_flag, # 33 -
+                bw_urg_flag, # 34 -
+                fw_hdr_len, # 35
+                bw_hdr_len, # 36
+                fw_pkt_s, # 37
+                bw_pkt_s, # 38
+                pkt_len_min, # 39
+                pkt_len_max, # 40
+                pkt_len_avg, # 41
+                pkt_len_std, # 42
+                fin_cnt, # 43
+                syn_cnt, # 44
+                rst_cnt, # 45
+                psh_cnt, # 46
+                ack_cnt, # 47
+                urg_cnt, # 48 -
+                cwe_cnt, # 49
+                ece_cnt, # 50
+                down_up_ratio, # 51
+                fw_byt_blk_avg, # 52
+                fw_pkt_blk_avg, # 53
+                fw_blk_rate_avg, # 54
+                bw_byt_blk_avg, # 55
+                bw_pkt_blk_avg, # 56
+                bw_blk_rate_avg, # 57
+                subfl_fw_pk, # 58
+                subfl_fw_byt, # 59
+                subfl_bw_pk, # 60
+                subfl_bw_byt, # 61
+                fw_win_byt, # 62
+                bw_win_byt, # 63
+                fw_act_pkt, # 64
+                fw_seg_min, # 65 -
+                atv_avg, # 66
+                atv_std, # 67
+                atv_max, # 68
+                atv_min, # 69
+                idl_avg, # 70
+                idl_std, # 71
+                idl_max, # 72
+                idl_min, # 73
                 label
             ])
 
