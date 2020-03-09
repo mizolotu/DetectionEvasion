@@ -17,11 +17,11 @@ if __name__ == '__main__':
     dir = sys.argv[1]
     subdirs = sys.argv[2].split(',')
     subnets = sys.argv[3].split(',')
-    ports = sys.argv[4].split(',')
     stat_file = osp.join(dir, 'stats.pkl')
     with open(stat_file, 'rb') as f:
         stats = pickle.load(f)
     feature_inds = np.where(stats[4][:-1] > 0)[0]
+    print(feature_inds)
     files = []
     for subdir in subdirs:
         files.extend(find_data_files(osp.join(dir, subdir)))
@@ -41,13 +41,13 @@ if __name__ == '__main__':
     y = None
     for fi,f in enumerate(files_selected):
         print(fi / len(files_selected), f)
-        p = pandas.read_csv(f, delimiter=',', dtype=float, header=None)
+        p = pandas.read_csv(f, delimiter=',', header=None)
         v = p.values
         if x is not None and y is not None:
-            x = np.vstack([x, std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
+            x = np.vstack([x, std_data(v[:, 1 + feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
             y = np.hstack([y, v[:, -1]])
         else:
-            x = std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])
+            x = std_data(v[:, 1 + feature_inds], stats[1][feature_inds], stats[2][feature_inds])
             y = v[:, -1]
         print(x.shape, y.shape, sys.getsizeof(x))
     size = sys.getsizeof(x)

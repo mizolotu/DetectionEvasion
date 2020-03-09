@@ -1941,6 +1941,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
     p = pandas.read_csv(pkt_file, delimiter=',', skiprows=0, na_filter=False, header=None)
     pkts = p.values
 
+    flow_ids = []
     flows = []
     tracked_flow_ids = []
     tracked_flow_packets = []
@@ -1981,6 +1982,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
             )
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
             flows.extend(features)
+            flow_ids.extend(tracked_flow_ids)
             t = int(pkt[0]) + step
             counts_total = [ct + c for ct, c in zip(counts_total, counts)]
 
@@ -2005,7 +2007,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
                 tracked_flow_packets[idx].append(np.array([pkt[timestep_idx], pkt[size_idx], pkt[header_idx], pkt[window_idx]]))
                 tracked_flow_pkt_flags[idx].append(pkt[flag_idx])
                 tracked_flow_directions[idx].append(direction)
-    return flows
+    return flows, flow_ids
 
 if __name__ == '__main__':
 
@@ -2069,11 +2071,14 @@ if __name__ == '__main__':
                 if mode == 'pcaps-packets':
                     results, _ = read_pcap(input_file, ports=ports)
                 elif mode == 'packets-flows':
-                    results = extract_flows(input_file, ports=ports)
+                    results, flow_ids = extract_flows(input_file, ports=ports)
             else:
                 results = []
             if len(results) > 0:
-                lines = [','.join([str(item) for item in result]) for result in results]
+                if mode == 'pcaps-packets':
+                    lines = [','.join([str(item) for item in result]) for result in results]
+                elif mode == 'packets-flows':
+                    lines = ['{0},{1}'.format(flow_id, ','.join([str(item) for item in result])) for result, flow_id in zip(results, flow_ids)]
                 with open(result_file, 'w') as f:
                     f.writelines('\n'.join(lines))
                 print('{0} {1} have been extracted and saved'.format(len(results), mode.split('-')[1]))
