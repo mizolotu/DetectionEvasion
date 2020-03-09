@@ -11,6 +11,7 @@ if __name__ == '__main__':
 
     dir = sys.argv[1]
     subdirs = sys.argv[2].split(',')
+    subnets = sys.argv[3].split(',')
     stat_file = osp.join(dir, 'stats.pkl')
     with open(stat_file, 'rb') as f:
         stats = pickle.load(f)
@@ -19,12 +20,21 @@ if __name__ == '__main__':
     for subdir in subdirs:
         files.extend(find_data_files(osp.join(dir, subdir)))
 
+    # select files for the subnets specified
+
+    files_selected = []
+    for file in files:
+        for subnet in subnets:
+            if subnet in file:
+                files_selected.append(file)
+    print('Selected {0} files out of {1}'.format(len(files_selected), len(files)))
+
     # generate dataset
 
     x = None
     y = None
-    for fi,f in enumerate(files):
-        print(fi / len(files), f)
+    for fi,f in enumerate(files_selected):
+        print(fi / len(files_selected), f)
         p = pandas.read_csv(f, delimiter=',', dtype=float, header=None)
         v = p.values
         if x is not None and y is not None:
