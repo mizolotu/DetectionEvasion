@@ -90,6 +90,7 @@ class DeEnv(gym.Env):
                         if score > model_score:
                             model_score = score
                             model_name = sd
+                            print(model_name, model_score)
                 except Exception as e:
                     print(e)
         if model_name.startswith('dnn'):
