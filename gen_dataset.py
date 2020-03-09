@@ -9,7 +9,6 @@ def std_data(X, xmin, xmax):
     X = (X - np.ones((nsamples, 1)).dot(xmin.reshape(1, -1))) / np.ones((nsamples, 1)).dot((xmax - xmin).reshape(1, -1))
     return X
 
-
 if __name__ == '__main__':
 
 
@@ -18,6 +17,7 @@ if __name__ == '__main__':
     dir = sys.argv[1]
     subdirs = sys.argv[2].split(',')
     subnets = sys.argv[3].split(',')
+    ports = sys.argv[4].split(',')
     stat_file = osp.join(dir, 'stats.pkl')
     with open(stat_file, 'rb') as f:
         stats = pickle.load(f)

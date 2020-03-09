@@ -1543,8 +1543,8 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
             psh_cnt = flags.count('3')
             ack_cnt = flags.count('4')
             urg_cnt = flags.count('5')
-            cwe_cnt = flags.count('6')
-            ece_cnt = flags.count('7')
+            cwe_cnt = 0 #flags.count('6')
+            ece_cnt = 0 #flags.count('7')
 
             down_up_ratio = len(bw_pkts) / len(fw_pkts) if len(fw_pkts) > 0 else -1
 
@@ -1897,20 +1897,16 @@ def calculate_features_(idx, bulk_thr=1.0, idle_thr=5.0):
 def label_flow(flow_id, ts):
     timestamp = datetime.fromtimestamp(ts)
     date = timestamp.strftime('%d%m')
-    # print(flow_id, date)
     if '18.219.211.138' in flow_id and '-6' in flow_id and date == '1502': # DoS-GoldenEye
         label = 1
     elif '18.217.165.70' in flow_id and '-6' in flow_id and date == '1502': # DoS-Slowloris
         label = 2
-    elif '13.59.126.31' in flow_id and '-6' in flow_id and date == '1602': # DoS-SlowHTTPTest, there are no such packets actually
-        label = 3
     elif '18.219.193.20' in flow_id and '-6' in flow_id and date == '1602': # DoS-Hulk
-        label = 4
+        label = 3
     elif '18.218.115.60' in flow_id and '-6' in flow_id and date in ['2202', '2302']: # BruteForce-Web
-        label = 5
-        print('Brute Force')
+        label = 4
     elif '18.219.211.138' in flow_id and '-6' in flow_id and date == '0203':  # Bot
-        label = 6
+        label = 5
     else:
         label = 0
     return label
