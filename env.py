@@ -1,16 +1,18 @@
-import gym, socket
+import gym, socket, pickle, os
 import numpy as np
+import os.path as osp
 
 from gym import spaces
 from threading import Thread
 from pcap_proc import read_iface,  calculate_features
 from time import time, sleep
+from train_dnn import create_model as dnn_model
 
 class DeEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, src_port, server, attack, obs_len, iface='enp0s25'):
+    def __init__(self, src_port, server, attack, obs_len, iface='enp0s25', flow_std_file='data/flows/stats.pkl', model_dir='models', model_type='dnn'):
 
         super(DeEnv, self).__init__()
 
@@ -23,6 +25,11 @@ class DeEnv(gym.Env):
         self.monitor_thr = Thread(target=read_iface, args=(self.pkt_list, iface, src_port, server[0]), daemon=True)
         self.monitor_thr.start()
         self.t_start = time()
+        with open(flow_std_file, 'rb') as f:
+            stats = pickle.load(f)
+        self.xmin = stats[1]
+        self.xmax = stats[2]
+        self.target_model = self._load_model(model_dir, model_type)
 
         # actions: break, delay, pad, packet
 
@@ -69,10 +76,31 @@ class DeEnv(gym.Env):
                 break
         return obs
 
+    def _load_model(self, model_dir, prefix):
+        model_score = 0
+        model_name = ''
+        for sd in os.listdir(dir):
+            subdir = osp.join(dir, sd)
+            if osp.isdir(sd) and sd.startswith(osp.join(dir, prefix)):
+                try:
+                    with open(osp.join(subdir, 'metrics.txt'), 'r') as f:
+                        line = f.readline()
+                        spl = line.split(',')
+                        score = float(spl[-1])
+                        if score > model_score:
+                            model_score = score
+                            model_name = sd
+                except Exception as e:
+                    print(e)
+        if model_name.startswith('dnn'):
+            params = [int(item) for item in model_name.split('_')[1:]]
+            model = dnn_model(params)
+        return model
+
     def _classify(self):
         flow_ids = ['-{0}-{1}-{2}-6'.format(self.port, self.remote[0], self.remote[1])]
         pkt_lists = [[[pkt[0], pkt[6], pkt[7], pkt[9]] for pkt in self.pkt_list]]
         pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
         pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
         features = calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-        print(features)
+        x = (np.array(features[0]) - self.xmin) / (self.xmax - self.xmin)
