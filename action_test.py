@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     print('Socket Created')
 
-    remote_ip = '192.168.1.124'
+    remote_ip = sys.argv[1]
     port = 80
 
     #s.settimeout(1.0)
