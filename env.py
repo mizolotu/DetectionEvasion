@@ -95,7 +95,7 @@ class DeEnv(gym.Env):
                     print(e)
         if model_name.startswith('dnn'):
             params = [int(item) for item in model_name.split('_')[1:]]
-            model = dnn_model(params)
+            model = dnn_model(*params)
         return model
 
     def _classify(self):
