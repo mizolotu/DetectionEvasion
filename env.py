@@ -12,7 +12,7 @@ class DeEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, src_port, server, attack, obs_len, iface='enp0s25', flow_std_file='data/flows/stats.pkl', model_dir='models', model_type='dnn'):
+    def __init__(self, iface, src_port, server, attack, obs_len, flow_std_file='data/flows/stats.pkl', model_dir='models', model_type='dnn'):
 
         super(DeEnv, self).__init__()
 
