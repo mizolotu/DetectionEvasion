@@ -43,7 +43,7 @@ if __name__ == '__main__':
         print(fi / len(files_selected), f)
         p = pandas.read_csv(f, delimiter=',', header=None)
         v = p.values[:, 1:]  # first column corresponds to flow ids
-        np.asarray(v, dtype=float)
+        v = np.array(v, dtype=float)
         if x is not None and y is not None:
             x = np.vstack([x, std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
             y = np.hstack([y, v[:, -1]])
