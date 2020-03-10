@@ -50,7 +50,7 @@ if __name__ == '__main__':
     X_tr, Y_tr, X_val, Y_val, X_te, Y_te = load_dataset('data/flows', 'flows', '.pkl')
     nfeatures = X_tr.shape[1]
     nlabels = len(np.unique(Y_tr))
-    print(X_tr.shape, Y_tr.shape, X_val.shape, Y_val.shape, X_te.shape, Y_te.shape)
+    print(X_tr.dtype, Y_tr.dtype, X_tr.shape, Y_tr.shape, X_val.shape, Y_val.shape, X_te.shape, Y_te.shape)
 
     # lazy labeling: 0 or 1
 
