@@ -5,8 +5,8 @@ import numpy as np
 from env import DeEnv
 from time import sleep
 
-def create_env(port, remote, attack, state_height):
-    return lambda : DeEnv(port, remote, attack, state_height)
+def create_env(iface, port, remote, attack, state_height):
+    return lambda : DeEnv(iface, port, remote, attack, state_height)
 
 if __name__ == '__main__':
     iface = sys.argv[1]
