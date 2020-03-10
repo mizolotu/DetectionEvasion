@@ -50,7 +50,7 @@ if __name__ == '__main__':
         else:
             x = std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])
             y = v[:, -1]
-        print(x.shape, y.shape, sys.getsizeof(x), len(np.where(y > 0)[0]))
+        print(x.shape, y.shape, sys.getsizeof(x) / (1024**3), len(np.where(y > 0)[0]))
     size = sys.getsizeof(x)
     maxsize = 4e9
     nchunks = int(size // maxsize) + 1
