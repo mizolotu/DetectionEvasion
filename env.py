@@ -27,6 +27,7 @@ class DeEnv(gym.Env):
         self.t_start = time()
         with open(flow_std_file, 'rb') as f:
             stats = pickle.load(f)
+        self.target_features = np.where(stats[4] > 0)[0]
         self.xmin = stats[1]
         self.xmax = stats[2]
         self.target_model = self._load_model(model_dir, model_type)
@@ -95,7 +96,7 @@ class DeEnv(gym.Env):
                     print(e)
         if model_name.startswith('dnn'):
             params = [int(item) for item in model_name.split('_')[1:]]
-            model = dnn_model(*params)
+            model = dnn_model(len(self.target_features), *params)
         return model
 
     def _classify(self):
