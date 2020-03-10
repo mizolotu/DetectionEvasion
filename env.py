@@ -41,7 +41,8 @@ class DeEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=np.inf, shape=(self.obs_len, self.n_obs_features))
 
     def step(self, action):
-        self._classify()
+        y = self._classify()
+        print(y)
 
     def reset(self):
         self.pkt_list.clear()
@@ -104,5 +105,7 @@ class DeEnv(gym.Env):
         pkt_lists = [[[pkt[0], pkt[6], pkt[7], pkt[9]] for pkt in self.pkt_list]]
         pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
         pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
-        features = calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-        x = (np.array(features[0]) - self.xmin) / (self.xmax - self.xmin)
+        v = calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions)
+        x = (np.array(v[0, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
+        return self.target_model.predict(x)
+
