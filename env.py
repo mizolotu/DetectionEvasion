@@ -81,7 +81,7 @@ class DeEnv(gym.Env):
     def _load_model(self, model_dir, prefix):
         model_score = 0
         model_name = ''
-        chkpt_path = ''
+        ckpt_path = ''
         for sd in os.listdir(model_dir):
             subdir = osp.join(model_dir, sd)
             if osp.isdir(subdir) and sd.startswith(prefix):
@@ -93,14 +93,14 @@ class DeEnv(gym.Env):
                         if score > model_score:
                             model_score = score
                             model_name = sd
-                            chkpt_path = osp.join(subdir, 'checkpoint')
-                            print(model_name, model_score, chkpt_path)
+                            ckpt_path = osp.join(subdir, 'ckpt')
+                            print(model_name, model_score, ckpt_path)
                 except Exception as e:
                     print(e)
         if model_name.startswith('dnn'):
             params = [int(item) for item in model_name.split('_')[1:]]
             model = dnn_model(len(self.target_features), *params)
-            model.load_weights(chkpt_path)
+            model.load_weights(ckpt_path)
         return model
 
     def _classify(self):
