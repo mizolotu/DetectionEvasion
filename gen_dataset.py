@@ -42,12 +42,13 @@ if __name__ == '__main__':
     for fi,f in enumerate(files_selected):
         print(fi / len(files_selected), f)
         p = pandas.read_csv(f, delimiter=',', header=None)
-        v = p.values
+        v = p.values[:, 1:]  # first column corresponds to flow ids
+        np.asarray(v, dtype=float)
         if x is not None and y is not None:
-            x = np.vstack([x, std_data(v[:, 1 + feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
+            x = np.vstack([x, std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])])
             y = np.hstack([y, v[:, -1]])
         else:
-            x = std_data(v[:, 1 + feature_inds], stats[1][feature_inds], stats[2][feature_inds])
+            x = std_data(v[:, feature_inds], stats[1][feature_inds], stats[2][feature_inds])
             y = v[:, -1]
         print(x.shape, y.shape, sys.getsizeof(x))
     size = sys.getsizeof(x)
