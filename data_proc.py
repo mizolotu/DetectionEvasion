@@ -82,12 +82,12 @@ def load_dataset(data_dir, data_file_prefix, data_file_postfix, tvt=[0.4,0.2,0.4
         print(data_file)
         with open(data_file, 'rb') as f:
             XY = pickle.load(f)
-            nfeatures = XY.shape[0]
+            nfeatures = XY.shape[1]
             if X is not None and Y is not None:
-                X = np.vstack([X, XY[:, :nfeatures]])
+                X = np.vstack([X, XY[:, :nfeatures-1]])
                 Y = np.hstack([Y, XY[:, -1]])
             else:
-                X = XY[:, :nfeatures]
+                X = XY[:, :nfeatures-1]
                 Y = XY[:, -1]
 
     # separate to train, validation and test chunks
