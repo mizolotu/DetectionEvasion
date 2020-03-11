@@ -29,7 +29,7 @@ class IntrusionDetectionAccuracy(tf.keras.metrics.Metric):
         self.tt.assign(0.)
 
 
-def create_model(nfeatures, nlayers, nhidden, ncategories, lr=1e-6):
+def create_model(nfeatures, nlayers, nhidden, ncategories=2, lr=1e-6):
     model = tf.keras.models.Sequential()
     model.add(tf.keras.layers.Input(shape=(nfeatures,)))
     for _ in range(nlayers):
@@ -62,12 +62,12 @@ if __name__ == '__main__':
 
     # test models
 
-    model_checkpoint_path = 'models/dnn_{0}_{1}_{2}/ckpt'
-    model_stats_file = 'models/dnn_{0}_{1}_{2}/metrics.txt'
+    model_checkpoint_path = 'models/dnn_{0}_{1}/ckpt'
+    model_stats_file = 'models/dnn_{0}_{1}/metrics.txt'
     n_layers = [1, 2, 3, 4, 5]
     n_hidden = [256, 512, 768, 1024]
-    n_labels = [2, int(nlabels)]
-    batch_size = 2048
+    n_labels = [2]
+    batch_size = 512
     epochs = 1000
     for nl in n_layers:
         for nh in n_hidden:
