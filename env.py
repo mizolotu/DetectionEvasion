@@ -48,6 +48,8 @@ class DeEnv(gym.Env):
             pkt = self._generate_bruteforce_packet()
         self.sckt.sendall(pkt.encode('utf-8'))
         self._process_reply()
+        print(self.user_token)
+        print(self.user_token)
 
         # observation
 
@@ -145,7 +147,7 @@ class DeEnv(gym.Env):
             ]
         else:
             password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-            content = '\r\n\r\nusername=admin&password={0}&Login=Login&user_token={1}'.format(password, self.user_token)
+            content = 'username=admin&password={0}&Login=Login&user_token={1}'.format(password, self.user_token)
             packet_as_a_list = [
                 'POST {0} HTTP/1.1'.format(self.url),
                 'Host: {0}'.format(self.remote[0]),
@@ -154,10 +156,10 @@ class DeEnv(gym.Env):
                 'Accept-Language: en-US,en;q=0.5',
                 'Accept-Encoding: gzip, deflate',
                 'Referer: {0}'.format(self.referer),
-                'Cookie: {0}'.format(self.cookie)
+                'Cookie: {0}'.format(self.cookie),
+                'Content-Length: {0}\r\n\r\n'.format(len(content))
             ]
         return '\r\n'.join(packet_as_a_list)
-
 
     def _process_reply(self):
         reply = self.sckt.recv(4096).decode('utf-8')
