@@ -79,7 +79,7 @@ class DeEnv(gym.Env):
 
         # done
 
-        y = self._classify()
+        y = self.label
         if y == 1:
             done = True
         else:
