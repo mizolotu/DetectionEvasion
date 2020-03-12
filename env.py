@@ -52,8 +52,6 @@ class DeEnv(gym.Env):
         print(pkt)
 
         ack = self._process_reply()
-        print(ack)
-
         print(self.pkt_list)
 
         # observation
@@ -232,5 +230,8 @@ class DeEnv(gym.Env):
         pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
         v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
         x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-        return np.argmax(self.target_model.predict(x))
+        label = self.target_model.predict(x)
+        print(x)
+        print(label)
+        return np.argmax(label)
 
