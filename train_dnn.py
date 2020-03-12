@@ -35,7 +35,7 @@ def create_model(nfeatures, nlayers, nhidden, ncategories=2, lr=1e-6):
     for _ in range(nlayers):
         model.add(tf.keras.layers.Dense(nhidden, activation='relu'))
         model.add(tf.keras.layers.Dropout(0.5))
-    model.add(tf.keras.layers.Dense(ncategories))
+    model.add(tf.keras.layers.Dense(ncategories, activation='sigmoid'))
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         optimizer=tf.keras.optimizers.Adam(lr=lr),
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     n_hidden = [256, 512, 768, 1024]
     n_labels = [2]
     batch_size = 512
-    epochs = 1000
+    epochs = 100
     for nl in n_layers:
         for nh in n_hidden:
             for nn in n_labels:
