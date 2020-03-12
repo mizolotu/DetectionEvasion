@@ -43,6 +43,11 @@ class DeEnv(gym.Env):
         self.label_thr = Thread(target=self._classify, daemon=True)
         self.label_thr.start()
 
+        # action params
+
+        self.max_delay = 1
+        self.max_pad = 1024
+
         # actions: break, delay, pad, packet
 
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.n_actions,))
@@ -51,21 +56,30 @@ class DeEnv(gym.Env):
 
         self.observation_space = spaces.Box(low=0, high=np.inf, shape=(self.obs_len, self.n_obs_features))
 
+        # other stuff
+
+        self.debug = False
+
     def step(self, action):
 
+        # actions
+
         action_std = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
+        send_pkt_prob = action_std[0]
+        send_pkt_delay = action_std[1] * self.max_delay
+        send_pkt_pad = action_std[2] * self.max_pad
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
 
-        if np.random.rand() < 1: #action_std[0]:
+        if np.random.rand() < action_std[0]:
             pkts_req = len(self.pkt_list) + 2
-            print(time())
+            sleep(send_pkt_delay)
             self.sckt.sendall(pkt.encode('utf-8'))
-            print('PACKET SENT:')
-            print(pkt)
+            if self.debug:
+                print('PACKET SENT:')
+                print(pkt)
             ack = self._process_reply()
-            print(self.pkt_list)
         else:
             pkts_req = None
 
