@@ -144,7 +144,7 @@ class DeEnv(gym.Env):
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language: en-US,en;q=0.5',
                 'Accept-Encoding: gzip, deflate',
-                'Referer: {0}'.format(self.referer)
+                'Referer: {0}\r\n\r\n'.format(self.referer)
             ]
         else:
             password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
