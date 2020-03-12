@@ -231,7 +231,7 @@ class DeEnv(gym.Env):
         v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
         x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
         label = self.target_model.predict(x)
-        print(x)
+        print(','.join([str(item) for item in x])
         print(label)
         return np.argmax(label)
 
