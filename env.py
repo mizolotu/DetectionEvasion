@@ -1,4 +1,4 @@
-import gym, socket, pickle, os, random, string
+import gym, socket, pickle, os, random, string, zlib
 import numpy as np
 import os.path as osp
 
@@ -165,7 +165,7 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         reply = self.sckt.recv(4096)
         print(reply)
-        decoded = reply.decode('utf-8')
+        decoded = zlib.decompress(reply, 16+zlib.MAX_WBITS)# reply.decode('utf-8')
         print(decoded)
         lines = decoded.split('\r\n')
         if self.user_token is None:
