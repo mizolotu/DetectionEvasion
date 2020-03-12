@@ -143,7 +143,7 @@ class DeEnv(gym.Env):
                 'User-Agent: {0}'.format(self.user_agent),
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language: en-US,en;q=0.5',
-                'Accept-Encoding: gzip, deflate',
+                #'Accept-Encoding: gzip, deflate',
                 'Referer: {0}\r\n\r\n'.format(self.referer)
             ]
         else:
@@ -165,7 +165,7 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         reply = self.sckt.recv(4096)
         print(reply)
-        decoded = zlib.decompress(reply, 16+zlib.MAX_WBITS)# reply.decode('utf-8')
+        decoded = reply.decode('utf-8')
         print(decoded)
         lines = decoded.split('\r\n')
         if self.user_token is None:
