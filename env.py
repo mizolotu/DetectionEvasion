@@ -146,7 +146,7 @@ class DeEnv(gym.Env):
                 'Referer: {0}\r\n\r\n'.format(self.referer)
             ]
         else:
-            password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=np.random.randint(32,48)))
             content = 'username=admin&password={0}&Login=Login&user_token={1}'.format(password, self.user_token)
             packet_as_a_list = [
                 'POST {0} HTTP/1.1'.format(self.url),
@@ -164,6 +164,7 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         try:
             reply = self.sckt.recv(4096).decode('utf-8')
+            print(reply)
             ack = True
             lines = reply.split('\r\n')
             if self.user_token is None:
