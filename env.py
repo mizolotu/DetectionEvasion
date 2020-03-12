@@ -1,4 +1,4 @@
-import gym, socket, pickle, os, random, string, zlib
+import gym, socket, pickle, os, random, string
 import numpy as np
 import os.path as osp
 
@@ -16,15 +16,20 @@ class DeEnv(gym.Env):
 
         super(DeEnv, self).__init__()
 
+        # server params
+
         self.obs_len = obs_len
         self.n_obs_features = 12
-        self.n_actions = 5
+        self.n_actions = 4
         self.port = src_port
         self.remote = server
         self.pkt_list = []
         self.monitor_thr = Thread(target=read_iface, args=(self.pkt_list, iface, src_port, server[0]), daemon=True)
         self.monitor_thr.start()
         self.t_start = time()
+
+        # target model params
+
         with open(flow_std_file, 'rb') as f:
             stats = pickle.load(f)
         self.target_features = np.where(stats[4] > 0)[0][:-1] # the last feature is the label, we do not need it here
@@ -33,6 +38,10 @@ class DeEnv(gym.Env):
         #self.target_model = self._load_model(model_dir, model_type)
         self.url = url
         self.attack = attack
+        self.label = 0
+        self.label_period = 1.0
+        self.label_thr = Thread(target=self._classify, daemon=True)
+        self.label_thr.start()
 
         # actions: break, delay, pad, packet
 
@@ -44,19 +53,25 @@ class DeEnv(gym.Env):
 
     def step(self, action):
 
+        action_std = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
+
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
-        self.sckt.sendall(pkt.encode('utf-8'))
 
-        print('PACKET SENT:')
-        print(pkt)
-
-        ack = self._process_reply()
-        print(self.pkt_list)
+        if np.random.rand() < 1: #action_std[0]:
+            pkts_req = len(self.pkt_list) + 2
+            print(time())
+            self.sckt.sendall(pkt.encode('utf-8'))
+            print('PACKET SENT:')
+            print(pkt)
+            ack = self._process_reply()
+            print(self.pkt_list)
+        else:
+            pkts_req = None
 
         # observation
 
-        obs = self._get_obs()
+        obs = self._get_obs(pkts_req)
 
         # reward
 
@@ -70,12 +85,13 @@ class DeEnv(gym.Env):
         else:
             done = False
 
-        print(y, reward, done)
+        print(action, y, reward, done)
 
         return obs, reward, done, {}
 
     def reset(self):
         self.pkt_list.clear()
+        self.label = 0.0
         self._generate_user_agent()
         self._generate_referer()
         self.user_token = None
@@ -84,16 +100,18 @@ class DeEnv(gym.Env):
         self.sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sckt.bind(('', self.port))
+        print(time())
         self.sckt.connect(self.remote)
-        while len(self.pkt_list) < 3:
-            sleep(0.001)
-        obs = self._get_obs()
+        obs = self._get_obs(3)
         return obs
 
     def render(self, mode='human', close=False):
         pass
 
-    def _get_obs(self):
+    def _get_obs(self, pkts_needed=None):
+        if pkts_needed is not None:
+            while len(self.pkt_list) < pkts_needed:
+                sleep(0.001)
         obs = np.zeros((self.obs_len, self.n_obs_features))
         for i,p in enumerate(self.pkt_list[::-1]):
             obs[-i-1, 0] = p[0] - self.t_start
@@ -224,14 +242,12 @@ class DeEnv(gym.Env):
         return model
 
     def _classify(self):
-        flow_ids = ['-{0}-{1}-{2}-6'.format(self.port, self.remote[0], self.remote[1])]
-        pkt_lists = [[[pkt[0], pkt[6], pkt[7], pkt[9]] for pkt in self.pkt_list]]
-        pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
-        pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
-        v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
-        x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-        print(','.join([str(item) for item in x[0]]))
-        label = self.target_model.predict(x)
-        print(label)
-        return np.argmax(label)
-
+        while True:
+            sleep(self.label_period)
+            flow_ids = ['-{0}-{1}-{2}-6'.format(self.port, self.remote[0], self.remote[1])]
+            pkt_lists = [[[pkt[0], pkt[6], pkt[7], pkt[9]] for pkt in self.pkt_list]]
+            pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
+            pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
+            v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
+            x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
+            #self.label = np.argmax(self.target_model.predict(x[0]))
