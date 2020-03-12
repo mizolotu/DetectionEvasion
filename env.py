@@ -162,7 +162,7 @@ class DeEnv(gym.Env):
                 #'Accept-Encoding: gzip, deflate',
                 'Referer: {0}'.format(self.referer),
                 'Cookie: {0}'.format(self.cookie),
-                'Content-Length: {0}\r\n\r\n'.format(len(content))
+                'Content-Length: {0}\r\n\r\n{1}'.format(len(content), content)
             ]
         return '\r\n'.join(packet_as_a_list)
 
