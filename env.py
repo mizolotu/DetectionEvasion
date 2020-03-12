@@ -100,6 +100,8 @@ class DeEnv(gym.Env):
         if model_name.startswith('dnn'):
             params = [int(item) for item in model_name.split('_')[1:]]
             model = dnn_model(len(self.target_features), *params)
+            print(len(self.target_features))
+            model.summary()
             model.load_weights(ckpt_path)
         return model
 
