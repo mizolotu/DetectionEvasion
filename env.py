@@ -46,6 +46,7 @@ class DeEnv(gym.Env):
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
+        print(pkt)
         self.sckt.sendall(pkt.encode('utf-8'))
         self._process_reply()
         print(self.user_token)
