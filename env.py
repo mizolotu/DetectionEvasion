@@ -46,8 +46,8 @@ class DeEnv(gym.Env):
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
-
-        print(pkt)
+        self.sckt.sendall(pkt.encode('utf-8'))
+        self._process_reply()
 
         # observation
 
@@ -162,20 +162,20 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         reply = self.sckt.recv(4096).decode('utf-8')
         lines = reply.split('\r\n')
-        for line in lines:
-            if 'user_token' in line:
-                spl = line.split('value=')
-                user_token = spl[1].split('/>')[0][1:-2]
-        print('User token: {0}'.format(user_token))
-
-        cookie_list = []
-        spl = reply.split('Set-Cookie: ')
-        for item in spl[1:]:
-            cookie_value = item.split(';')[0]
-            if cookie_value not in cookie_list:
-                cookie_list.append(cookie_value)
-        cookie = ';'.join(cookie_list)
-        return user_token, cookie
+        if self.user_token is None:
+            for line in lines:
+                if 'user_token' in line:
+                    spl = line.split('value=')
+                    self.user_token = spl[1].split('/>')[0][1:-2]
+                    break
+        if self.cookie is None:
+            cookie_list = []
+            spl = reply.split('Set-Cookie: ')
+            for item in spl[1:]:
+                cookie_value = item.split(';')[0]
+                if cookie_value not in cookie_list:
+                    cookie_list.append(cookie_value)
+            self.cookie = ';'.join(cookie_list)
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
