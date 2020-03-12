@@ -30,7 +30,7 @@ class DeEnv(gym.Env):
         self.target_features = np.where(stats[4] > 0)[0][:-1] # the last feature is the label, we do not need it here
         self.xmin = stats[1]
         self.xmax = stats[2]
-        self.target_model = self._load_model(model_dir, model_type)
+        #self.target_model = self._load_model(model_dir, model_type)
         self.url = url
         self.attack = attack
 
@@ -231,7 +231,7 @@ class DeEnv(gym.Env):
         v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
         x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
         label = self.target_model.predict(x)
-        print(','.join([str(item) for item in x])
+        print(','.join([str(item) for item in x]))
         print(label)
         return np.argmax(label)
 
