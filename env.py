@@ -46,11 +46,8 @@ class DeEnv(gym.Env):
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
-        print(pkt)
         self.sckt.sendall(pkt.encode('utf-8'))
-        self._process_reply()
-        print(self.user_token)
-        print(self.user_token)
+        ack = self._process_reply()
 
         # observation
 
@@ -58,7 +55,7 @@ class DeEnv(gym.Env):
 
         # reward
 
-        reward = self._calculate_reward()
+        reward = self._calculate_reward(pkt, ack)
 
         # done
 
@@ -155,7 +152,7 @@ class DeEnv(gym.Env):
                 'User-Agent: {0}'.format(self.user_agent),
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language: en-US,en;q=0.5',
-                'Accept-Encoding: gzip, deflate',
+                #'Accept-Encoding: gzip, deflate',
                 'Referer: {0}'.format(self.referer),
                 'Cookie: {0}'.format(self.cookie),
                 'Content-Length: {0}\r\n\r\n'.format(len(content))
@@ -163,22 +160,35 @@ class DeEnv(gym.Env):
         return '\r\n'.join(packet_as_a_list)
 
     def _process_reply(self):
-        reply = self.sckt.recv(4096).decode('utf-8')
-        lines = reply.split('\r\n')
-        if self.user_token is None:
-            for line in lines:
-                if 'user_token' in line:
-                    spl = line.split('value=')
-                    self.user_token = spl[1].split('/>')[0][1:-2]
-                    break
-        if self.cookie is None:
-            cookie_list = []
-            spl = reply.split('Set-Cookie: ')
-            for item in spl[1:]:
-                cookie_value = item.split(';')[0]
-                if cookie_value not in cookie_list:
-                    cookie_list.append(cookie_value)
-            self.cookie = ';'.join(cookie_list)
+        try:
+            reply = self.sckt.recv(4096).decode('utf-8')
+            ack = True
+            lines = reply.split('\r\n')
+            if self.user_token is None:
+                for line in lines:
+                    if 'user_token' in line:
+                        spl = line.split('value=')
+                        self.user_token = spl[1].split('/>')[0][1:-2]
+                        break
+            if self.cookie is None:
+                cookie_list = []
+                spl = reply.split('Set-Cookie: ')
+                for item in spl[1:]:
+                    cookie_value = item.split(';')[0]
+                    if cookie_value not in cookie_list:
+                        cookie_list.append(cookie_value)
+                self.cookie = ';'.join(cookie_list)
+        except Exception as e:
+            print(e)
+            ack = False
+        return ack
+
+    def _calculate_reward(self, pkt, ack):
+        reward = 0
+        if self.attack == 'bruteforce':
+            if 'POST' in pkt and ack == True:
+                reward = 1
+        return reward
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
