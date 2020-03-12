@@ -48,6 +48,8 @@ class DeEnv(gym.Env):
             pkt = self._generate_bruteforce_packet()
         self.sckt.sendall(pkt.encode('utf-8'))
         ack = self._process_reply()
+        print(ack)
+        print(self.pkt_list)
 
         # observation
 
