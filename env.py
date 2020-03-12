@@ -47,9 +47,13 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
         self.sckt.sendall(pkt.encode('utf-8'))
-        ack = self._process_reply()
+
+        print('PACKET SENT:')
         print(pkt)
+
+        ack = self._process_reply()
         print(ack)
+
         print(self.pkt_list)
 
         # observation
@@ -165,6 +169,7 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         try:
             reply = self.sckt.recv(4096).decode('utf-8')
+            print('PACKET RECEIVED:')
             print(reply)
             ack = True
             lines = reply.split('\r\n')
