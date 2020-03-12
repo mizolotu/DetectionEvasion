@@ -163,11 +163,8 @@ class DeEnv(gym.Env):
         return '\r\n'.join(packet_as_a_list)
 
     def _process_reply(self):
-        reply = self.sckt.recv(4096)
-        print(reply)
-        decoded = reply.decode('utf-8')
-        print(decoded)
-        lines = decoded.split('\r\n')
+        reply = self.sckt.recv(4096).decode('utf-8')
+        lines = reply.split('\r\n')
         if self.user_token is None:
             for line in lines:
                 if 'user_token' in line:
