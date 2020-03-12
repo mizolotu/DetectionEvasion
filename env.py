@@ -18,7 +18,7 @@ class DeEnv(gym.Env):
 
         self.obs_len = obs_len
         self.n_obs_features = 12
-        self.n_actions = 4
+        self.n_actions = 5
         self.port = src_port
         self.remote = server
         self.pkt_list = []
@@ -31,6 +31,8 @@ class DeEnv(gym.Env):
         self.xmin = stats[1]
         self.xmax = stats[2]
         self.target_model = self._load_model(model_dir, model_type)
+        self.attack = attack
+        self.attack_payloads = []
 
         # actions: break, delay, pad, packet
 
@@ -41,11 +43,33 @@ class DeEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=np.inf, shape=(self.obs_len, self.n_obs_features))
 
     def step(self, action):
+
+
+
+        # observation
+
+        obs = self._get_obs()
+
+        # reward
+
+        reward = self._calculate_reward()
+
+        # done
+
         y = self._classify()
-        print(y)
+        if y == 1:
+            done = True
+        else:
+            done = False
+
+        print(y, reward, done)
+
+        return obs, reward, done, {}
 
     def reset(self):
         self.pkt_list.clear()
+        self.attack_payloads = self._generate_attack_packets()
+        print(self.attack_payloads)
         self.t_start = time()
         sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -77,6 +101,48 @@ class DeEnv(gym.Env):
             if i >= self.obs_len - 1:
                 break
         return obs
+
+    def _generate_http_headers(self):
+
+        user_agents = [
+            'Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.1.3) Gecko/20090913 Firefox/3.5.3',
+            'Mozilla/5.0 (Windows; U; Windows NT 6.1; en; rv:1.9.1.3) Gecko/20090824 Firefox/3.5.3 (.NET CLR 3.5.30729)',
+            'Mozilla/5.0 (Windows; U; Windows NT 5.2; en-US; rv:1.9.1.3) Gecko/20090824 Firefox/3.5.3 (.NET CLR 3.5.30729)',
+            'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.1) Gecko/20090718 Firefox/3.5.1',
+            'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/532.1 (KHTML, like Gecko) Chrome/4.0.219.6 Safari/532.1',
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; InfoPath.2)',
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0; SLCC1; .NET CLR 2.0.50727; .NET CLR 1.1.4322; .NET CLR 3.5.30729; .NET CLR 3.0.30729)',
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.2; Win64; x64; Trident/4.0)',
+            'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 5.1; Trident/4.0; SV1; .NET CLR 2.0.50727; InfoPath.2)',
+            'Mozilla/5.0 (Windows; U; MSIE 7.0; Windows NT 6.0; en-US)',
+            'Mozilla/4.0 (compatible; MSIE 6.1; Windows XP)',
+            'Opera/9.80 (Windows NT 5.2; U; ru) Presto/2.5.22 Version/10.51'
+        ]
+        user_agent = np.random.choice(user_agents)
+
+        referers = [
+            'http://www.google.com/?q=',
+            'http://www.usatoday.com/search/results?q=',
+            'http://engadget.search.aol.com/search?q='
+        ]
+        referer = np.random.choice(referers)
+
+        header_list = [
+            'User-Agent: {0}'.format(user_agent),
+            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language: en-US,en;q=0.5',
+            'Accept-Encoding: gzip, deflate',
+            'Referer: {0}'.format(referer)
+        ]
+        headers = '\r\n'.join(header_list)
+
+        return headers
+
+    def _generate_attack_packets(self):
+        headers = self._generate_http_headers()
+        if self.attack == 'bruteforce':
+            get_packet = 'GET /DVWA-master/login.php HTTP/1.1\r\nHost: {0}\r\n{1}\r\n\r\n'.format(self.remote[0], headers)
+            print(get_packet)
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
@@ -111,5 +177,5 @@ class DeEnv(gym.Env):
         pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
         v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
         x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-        return self.target_model.predict(x)
+        return np.argmax(self.target_model.predict(x))
 
