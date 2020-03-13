@@ -47,10 +47,9 @@ class Runner(AbstractEnvRunner):
                     scores[i].append(infos[i]['r'])
                 if 'l' in infos[i].keys() and infos[i]['l'] > steps[i]:
                     steps[i] = infos[i]['l']
-            for info in infos:
-                maybeepinfo = info.get('episode')
-                if maybeepinfo: epinfos.append(maybeepinfo)
             mb_rewards.append(rewards)
+        for i in range(self.env.num_envs):
+            epinfos.append({'r': np.mean(scores[i]), 'l': steps[i]})
 
         #batch of steps to batch of rollouts
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
