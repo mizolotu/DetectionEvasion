@@ -264,5 +264,5 @@ class DeEnv(gym.Env):
             pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
             v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
             x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-            self.label = np.argmax(self.target_model.predict(x[0]))
+            self.label = np.argmax(self.target_model.predict(x)[0])
             print('Flow label assigned by the target model: {0}'.format(self.label))
