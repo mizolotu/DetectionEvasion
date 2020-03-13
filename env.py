@@ -72,6 +72,7 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
 
+        to_be_done = False
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
@@ -85,6 +86,7 @@ class DeEnv(gym.Env):
             except Exception as e:
                 print(e)
                 ack = False
+                to_be_done = True
         else:
             pkts_req = None
             ack = False
@@ -100,7 +102,9 @@ class DeEnv(gym.Env):
         # done
 
         y = self.label
-        if y == 1:
+        if to_be_done:
+            done = True
+        elif y == 1:
             done = True
         else:
             done = False
