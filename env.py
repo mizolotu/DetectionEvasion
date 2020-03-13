@@ -70,7 +70,7 @@ class DeEnv(gym.Env):
         send_pkt_pad = action_std[2] * self.max_pad
 
         if self.attack == 'bruteforce':
-            pkt = self._generate_bruteforce_packet()
+            pkt = self._generate_bruteforce_packet(send_pkt_pad)
 
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
@@ -179,7 +179,7 @@ class DeEnv(gym.Env):
         ]
         self.referer = np.random.choice(referers)
 
-    def _generate_bruteforce_packet(self):
+    def _generate_bruteforce_packet(self, n_pad):
         if self.cookie == None or self.user_token == None:
             packet_as_a_list = [
                 'GET {0} HTTP/1.1'.format(self.url),
@@ -188,11 +188,12 @@ class DeEnv(gym.Env):
                 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language: en-US,en;q=0.5',
                 #'Accept-Encoding: gzip, deflate',
-                'Referer: {0}\r\n\r\n'.format(self.referer)
+                'Referer: {0}{1}\r\n\r\n'.format(self.referer, string.ascii_letters + string.digits, k=n_pad)
             ]
         else:
             password = ''.join(random.choices(string.ascii_letters + string.digits, k=np.random.randint(32,48)))
-            content = 'username=admin&password={0}&Login=Login&user_token={1}'.format(password, self.user_token)
+            pad = ''.join(random.choices(string.ascii_letters + string.digits, k=n_pad))
+            content = 'username=admin&password={0}&Login=Login&user_token={1}{2}'.format(password, self.user_token, pad)
             packet_as_a_list = [
                 'POST {0} HTTP/1.1'.format(self.url),
                 'Host: {0}'.format(self.remote[0]),
