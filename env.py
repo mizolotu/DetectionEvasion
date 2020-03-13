@@ -101,7 +101,8 @@ class DeEnv(gym.Env):
         else:
             done = False
 
-        print(action, y, reward, done)
+        if self.debug:
+            print(action, y, reward, done)
 
         return obs, reward, done, {}
 
