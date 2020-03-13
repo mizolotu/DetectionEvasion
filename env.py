@@ -119,7 +119,13 @@ class DeEnv(gym.Env):
         self.sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sckt.bind(('', self.port))
-        self.sckt.connect(self.remote)
+        ready = False
+        while not ready:
+            try:
+                self.sckt.connect(self.remote)
+                ready = True
+            except Exception as e:
+                print(e)
         obs = self._get_obs(3)
         return obs
 
