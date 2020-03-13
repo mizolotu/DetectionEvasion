@@ -94,12 +94,10 @@ class DeEnv(gym.Env):
         # observation
 
         obs = self._get_obs(pkts_req)
-        print('here {0}'.format(self.port))
 
         # reward
 
         reward = self._calculate_reward(pkt, ack)
-        print('here {0}'.format(self.port))
 
         # done
 
@@ -113,7 +111,6 @@ class DeEnv(gym.Env):
         if done:
             self.sckt.close()
             self.reset()
-        print('here {0}'.format(self.port))
 
         if self.debug:
             print(action, y, reward, done)
@@ -121,7 +118,6 @@ class DeEnv(gym.Env):
         return obs, reward, done, {}
 
     def reset(self):
-        print('Resetting')
         self.pkt_list.clear()
         self.label = 0.0
         self._generate_user_agent()
@@ -138,7 +134,7 @@ class DeEnv(gym.Env):
                 self.sckt.connect(self.remote)
                 ready = True
             except Exception as e:
-                print('Socket {0} not ready'.format(self.port))
+                #print('Socket {0} not ready'.format(self.port))
                 pass
         obs = self._get_obs(3)
         return obs
