@@ -125,7 +125,7 @@ class DeEnv(gym.Env):
                 self.sckt.connect(self.remote)
                 ready = True
             except Exception as e:
-                print(e)
+                pass
         obs = self._get_obs(3)
         return obs
 
@@ -278,4 +278,5 @@ class DeEnv(gym.Env):
             #print(','.join([str(item) for item in x[0]]))
             p = self.target_model.predict(x)[0]
             self.label = np.argmax(p)
-            print('Flow label: {0} ({1}) at {2}'.format(self.label, p, time()))
+            if self.debug:
+                print('Flow label: {0} ({1}) at {2}'.format(self.label, p, time()))
