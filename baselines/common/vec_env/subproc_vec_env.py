@@ -63,6 +63,9 @@ class SubprocVecEnv(VecEnv):
         self.viewer = None
         VecEnv.__init__(self, len(env_fns), observation_space, action_space)
 
+    def step_env(self, env_idx, action):
+        self.remotes[env_idx].send(('step', action))
+
     def step_async(self, actions):
         self._assert_not_closed()
         for remote, action in zip(self.remotes, actions):

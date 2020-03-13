@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from baselines.common.runners import AbstractEnvRunner
+from threading import Thread
 
 class Runner(AbstractEnvRunner):
     """
@@ -18,6 +19,30 @@ class Runner(AbstractEnvRunner):
         # Discount rate
         self.gamma = gamma
 
+    def run_env(self, env_idx, obs, states, done, q):
+        epinfos = []
+        scores = []
+        steps = 0
+        obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
+        for _ in range(self.nsteps):
+            obs = tf.constant(obs)
+            action, value, state, neglogpac = self.model.step(obs)
+            actions.append(action)
+            values.append(value)
+            states.append(state)
+            neglogpacs.append(neglogpac)
+            obss.append(obs.copy())
+            dones.append(done)
+
+            obs, reward, done, info = self.env.step_env(env_idx, action)
+            if 'r' in info.keys():
+                scores.append(info['r'])
+            if 'l' in info.keys() and info['l'] > steps:
+                steps = info['l']
+            rewards.append(reward)
+        epinfos.append({'r': np.mean(scores), 'l': steps})
+        q.put([])
+
     def run(self):
         # Here, we init the lists that will contain the mb of experiences
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones, mb_neglogpacs = [],[],[],[],[],[]
@@ -31,10 +56,8 @@ class Runner(AbstractEnvRunner):
             # Given observations, get action value and neglopacs
             # We already have self.obs because Runner superclass run self.obs[:] = env.reset() on init
             actions, values, self.states, neglogpacs = [], [], [], []
-            print(self.obs.shape)
             for env_i in range(self.env.num_envs):
                 obs = tf.constant(self.obs[env_i:env_i+1])
-                print(obs.shape)
                 action, value, state, neglogpac = self.model.step(obs)
                 actions.append(action)
                 values.append(value)
@@ -63,6 +86,7 @@ class Runner(AbstractEnvRunner):
             epinfos.append({'r': np.mean(scores[i]), 'l': steps[i]})
 
         #batch of steps to batch of rollouts
+
         mb_obs = np.asarray(mb_obs, dtype=self.obs.dtype)
         mb_rewards = np.asarray(mb_rewards, dtype=np.float32)
         mb_actions = np.asarray(mb_actions)
