@@ -86,7 +86,7 @@ class DeEnv(gym.Env):
             except Exception as e:
                 ack = False
                 to_be_done = True
-                print(e, to_be_done)
+                print(e, to_be_done, self.port)
         else:
             pkts_req = None
             ack = False
