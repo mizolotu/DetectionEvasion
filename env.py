@@ -35,7 +35,7 @@ class DeEnv(gym.Env):
         self.target_features = np.where(stats[4] > 0)[0][:-1] # the last feature is the label, we do not need it here
         self.xmin = stats[1]
         self.xmax = stats[2]
-        #self.target_model = self._load_model(model_dir, model_type)
+        self.target_model = self._load_model(model_dir, model_type)
         self.url = url
         self.attack = attack
         self.label = 0
@@ -264,4 +264,5 @@ class DeEnv(gym.Env):
             pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
             v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
             x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-            #self.label = np.argmax(self.target_model.predict(x[0]))
+            self.label = np.argmax(self.target_model.predict(x[0]))
+            print('Flow label assigned by the target model: {0}'.format(self.label))
