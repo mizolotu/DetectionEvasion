@@ -17,3 +17,6 @@ if __name__ == '__main__':
     for i in range(1000):
         obs, r, d, info = myenv.step(np.random.rand(3))
         print(i, r, d)
+        if d:
+            obs = myenv.reset()
+
