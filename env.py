@@ -273,12 +273,13 @@ class DeEnv(gym.Env):
             sleep(self.label_period)
             flow_ids = ['-{0}-{1}-{2}-6'.format(self.port, self.remote[0], self.remote[1])]
             pkt_lists = [[[pkt[0], pkt[6], pkt[7], pkt[9]] for pkt in self.pkt_list]]
-            pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
-            pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
-            v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
-            x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
-            #print(','.join([str(item) for item in x[0]]))
-            p = self.target_model.predict(x)[0]
-            self.label = np.argmax(p)
-            if self.debug:
-                print('Flow label: {0} ({1}) at {2}'.format(self.label, p, time()))
+            if len(pkt_lists[0]) > 0:
+                pkt_flags = [[str(pkt[8]) for pkt in self.pkt_list]]
+                pkt_directions = [[1 if pkt[2] == self.port else -1 for pkt in self.pkt_list]]
+                v = np.array(calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions))
+                x = (np.array(v[:, self.target_features]) - self.xmin[self.target_features]) / (self.xmax[self.target_features] - self.xmin[self.target_features])
+                #print(','.join([str(item) for item in x[0]]))
+                p = self.target_model.predict(x)[0]
+                self.label = np.argmax(p)
+                if self.debug:
+                    print('Flow label: {0} ({1}) at {2}'.format(self.label, p, time()))
