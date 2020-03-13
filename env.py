@@ -76,11 +76,15 @@ class DeEnv(gym.Env):
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
             sleep(send_pkt_delay)
-            self.sckt.sendall(pkt.encode('utf-8'))
-            if self.debug:
-                print('PACKET SENT:')
-                print(pkt)
-            ack = self._process_reply()
+            try:
+                self.sckt.sendall(pkt.encode('utf-8'))
+                if self.debug:
+                    print('PACKET SENT:')
+                    print(pkt)
+                ack = self._process_reply()
+            except Exception as e:
+                print(e)
+                ack = False
         else:
             pkts_req = None
             ack = False
