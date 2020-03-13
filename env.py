@@ -116,7 +116,6 @@ class DeEnv(gym.Env):
         self.sckt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sckt.bind(('', self.port))
-        print(time())
         self.sckt.connect(self.remote)
         obs = self._get_obs(3)
         return obs
@@ -201,8 +200,9 @@ class DeEnv(gym.Env):
     def _process_reply(self):
         try:
             reply = self.sckt.recv(4096).decode('utf-8')
-            print('PACKET RECEIVED:')
-            print(reply)
+            if self.debug:
+                print('PACKET RECEIVED:')
+                print(reply)
             ack = True
             lines = reply.split('\r\n')
             if self.user_token is None:
