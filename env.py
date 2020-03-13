@@ -72,8 +72,9 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet()
 
+        pkts_now = len(self.pkt_list)
         if np.random.rand() < action_std[0]:
-            pkts_req = len(self.pkt_list) + 2
+            pkts_req = pkts_now + 2
             sleep(send_pkt_delay)
             self.sckt.sendall(pkt.encode('utf-8'))
             if self.debug:
@@ -82,6 +83,7 @@ class DeEnv(gym.Env):
             ack = self._process_reply()
         else:
             pkts_req = None
+            ack = False
 
         # observation
 
