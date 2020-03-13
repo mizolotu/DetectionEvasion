@@ -134,6 +134,7 @@ class DeEnv(gym.Env):
                 self.sckt.connect(self.remote)
                 ready = True
             except Exception as e:
+                print('Socket {0} not ready'.format(self.port))
                 pass
         obs = self._get_obs(3)
         return obs
