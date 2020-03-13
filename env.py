@@ -20,7 +20,7 @@ class DeEnv(gym.Env):
 
         self.obs_len = obs_len
         self.n_obs_features = 12
-        self.n_actions = 4
+        self.n_actions = 3
         self.port = src_port
         self.remote = server
         self.pkt_list = []
@@ -73,7 +73,7 @@ class DeEnv(gym.Env):
             pkt = self._generate_bruteforce_packet()
 
         pkts_now = len(self.pkt_list)
-        if np.random.rand() < action_std[0]:
+        if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
             sleep(send_pkt_delay)
             self.sckt.sendall(pkt.encode('utf-8'))
