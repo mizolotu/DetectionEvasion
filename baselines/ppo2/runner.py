@@ -41,7 +41,7 @@ class Runner(AbstractEnvRunner):
                 self.states.append(state)
                 neglogpacs.append(neglogpac)
             #actions = actions._numpy()
-            actions = np.hstack(actions)
+            actions = np.vstack(actions)
             mb_obs.append(self.obs.copy())
             mb_actions.append(actions)
             #mb_values.append(values._numpy())
