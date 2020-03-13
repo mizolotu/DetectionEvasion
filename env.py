@@ -67,7 +67,7 @@ class DeEnv(gym.Env):
         action_std = (action - self.action_space.low) / (self.action_space.high - self.action_space.low)
         send_pkt_prob = action_std[0]
         send_pkt_delay = action_std[1] * self.max_delay
-        send_pkt_pad = action_std[2] * self.max_pad
+        send_pkt_pad = int(action_std[2] * self.max_pad)
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
