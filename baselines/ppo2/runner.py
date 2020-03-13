@@ -40,11 +40,14 @@ class Runner(AbstractEnvRunner):
                 values.append(value)
                 self.states.append(state)
                 neglogpacs.append(neglogpac)
-            actions = actions._numpy()
+            #actions = actions._numpy()
+            actions = np.hstack(actions)
             mb_obs.append(self.obs.copy())
             mb_actions.append(actions)
-            mb_values.append(values._numpy())
-            mb_neglogpacs.append(neglogpacs._numpy())
+            #mb_values.append(values._numpy())
+            mb_values.append(np.hstack(values))
+            #mb_neglogpacs.append(neglogpacs._numpy())
+            mb_neglogpacs.append(np.hstack(neglogpacs))
             mb_dones.append(self.dones)
 
             # Take actions in env and look the results
