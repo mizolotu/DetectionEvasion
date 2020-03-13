@@ -14,8 +14,12 @@ if __name__ == '__main__':
     env = create_env(iface, 12345, (server_ip, 80), '/DVWA-master/login.php', 'bruteforce', 64)
     myenv = env()
     obs = myenv.reset()
+    R = 0
     for i in range(1000):
         obs, r, d, info = myenv.step(np.random.rand(3))
+        R += r
+        print(i, R)
         if d:
             obs = myenv.reset()
+            R = 0
 
