@@ -84,9 +84,9 @@ class DeEnv(gym.Env):
                     print(pkt)
                 ack = self._process_reply()
             except Exception as e:
-                print(e)
                 ack = False
                 to_be_done = True
+                print(e, to_be_done)
         else:
             pkts_req = None
             ack = False
@@ -118,6 +118,7 @@ class DeEnv(gym.Env):
         return obs, reward, done, {}
 
     def reset(self):
+        print('Resetting')
         self.pkt_list.clear()
         self.label = 0.0
         self._generate_user_agent()
