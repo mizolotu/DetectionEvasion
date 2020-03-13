@@ -100,6 +100,8 @@ class DeEnv(gym.Env):
             done = True
         else:
             done = False
+        if done:
+            self.sckt.close()
 
         if self.debug:
             print(action, y, reward, done)
