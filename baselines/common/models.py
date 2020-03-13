@@ -50,8 +50,8 @@ def mlp(num_layers=2, num_hidden=64, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
-        # h = tf.keras.layers.Flatten(x_input)
-        h = x_input
+        h = tf.keras.layers.Flatten(x_input)
+        #h = x_input
         for i in range(num_layers):
           h = tf.keras.layers.Dense(units=num_hidden, kernel_initializer=ortho_init(np.sqrt(2)),
                                     name='mlp_fc{}'.format(i), activation=activation)(h)
