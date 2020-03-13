@@ -18,5 +18,6 @@ if __name__ == '__main__':
         obs, r, d, info = myenv.step(np.random.rand(3))
         #print(i, r, d)
         if d:
+            print('Reseting')
             obs = myenv.reset()
 
