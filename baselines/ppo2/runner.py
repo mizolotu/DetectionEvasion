@@ -23,6 +23,8 @@ class Runner(AbstractEnvRunner):
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones, mb_neglogpacs = [],[],[],[],[],[]
         mb_states = self.states
         epinfos = []
+        scores = [[] for _ in range(self.env.num_envs)]
+        steps = [0 for _ in range(self.env.num_envs)]
         # For n in range number of steps
         for _ in range(self.nsteps):
 
@@ -40,7 +42,11 @@ class Runner(AbstractEnvRunner):
             # Take actions in env and look the results
             # Infos contains a ton of useful informations
             self.obs[:], rewards, self.dones, infos = self.env.step(actions)
-            print(_, rewards)
+            for i in range(len(infos)):
+                if 'r' in infos[i].keys():
+                    scores[i].append(infos[i]['r'])
+                if 'l' in infos[i].keys() and infos[i]['l'] > steps[i]:
+                    steps[i] = infos[i]['l']
             for info in infos:
                 maybeepinfo = info.get('episode')
                 if maybeepinfo: epinfos.append(maybeepinfo)

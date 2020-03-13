@@ -59,6 +59,7 @@ class DeEnv(gym.Env):
         # other stuff
 
         self.debug = False
+        self.step_count = 0
 
     def step(self, action):
 
@@ -98,6 +99,7 @@ class DeEnv(gym.Env):
         # reward
 
         reward = self._calculate_reward(pkt, ack)
+        self.step_count += 1
 
         # done
 
@@ -115,11 +117,12 @@ class DeEnv(gym.Env):
         if self.debug:
             print(action, y, reward, done)
 
-        return obs, reward, done, {}
+        return obs, reward, done, {'r': reward, 'l': self.step_count}
 
     def reset(self):
         self.pkt_list.clear()
         self.label = 0.0
+        self.step_count = 0
         self._generate_user_agent()
         self._generate_referer()
         self.user_token = None
