@@ -94,10 +94,12 @@ class DeEnv(gym.Env):
         # observation
 
         obs = self._get_obs(pkts_req)
+        print('here {0}'.format(self.port))
 
         # reward
 
         reward = self._calculate_reward(pkt, ack)
+        print('here {0}'.format(self.port))
 
         # done
 
@@ -111,6 +113,7 @@ class DeEnv(gym.Env):
         if done:
             self.sckt.close()
             self.reset()
+        print('here {0}'.format(self.port))
 
         if self.debug:
             print(action, y, reward, done)
