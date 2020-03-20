@@ -34,6 +34,7 @@ class Runner(AbstractEnvRunner):
             neglogpacs.append(neglogpac)
             obss.append(obs)
             dones.append(done)
+            self.dones[env_idx] = done
 
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
@@ -91,6 +92,7 @@ class Runner(AbstractEnvRunner):
         print(mb_obs.shape, mb_rewards.shape, mb_actions.shape, mb_values.shape, mb_neglogpacs.shape, mb_dones.shape)
 
         last_values = self.model.value(tf.constant(self.obs))._numpy()
+        self.dones = np.array(self.dones)
 
         # discount/bootstrap off value fn
         mb_returns = np.zeros_like(mb_rewards)
