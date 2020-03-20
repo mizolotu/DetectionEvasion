@@ -59,15 +59,24 @@ class Runner(AbstractEnvRunner):
         for env_i in range(self.env.num_envs):
             thrs[env_i].join()
 
+        obs_list, action_list, value_list, neglogpac_list, reward_list, done_list, epinfo_list = [], [], [], [], [], [], []
         for i in range(self.env.num_envs):
-            obs, actions, values, states, neglogpacs, rewards, dones, epinfos = q.get()
-            mb_obs.append(obs)
-            mb_actions.append(actions)
-            mb_values.append(values)
-            mb_neglogpacs.append(neglogpacs)
-            mb_rewards.append(rewards)
-            mb_dones.append(dones)
-            epinfos.append(epinfos)
+            obs, actions, values, states, neglogpacs, rewards, dones, epinfo = q.get()
+            obs_list.append(obs)
+            action_list.append(actions)
+            value_list.append(values)
+            neglogpac_list.append(neglogpacs)
+            reward_list.append(rewards),
+            done_list.append(dones)
+            epinfos.append(epinfo)
+
+        for _ in range(self.nsteps):
+            mb_obs.append([item for item in obs_list])
+            mb_actions.append([item for item in action_list])
+            mb_values.append([item for item in value_list])
+            mb_neglogpacs.append([item for item in neglogpac_list])
+            mb_dones.append([item for item in done_list])
+            mb_rewards.append([item for item in reward_list])
 
         #batch of steps to batch of rollouts
 
