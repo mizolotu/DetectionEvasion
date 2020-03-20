@@ -30,7 +30,7 @@ class Runner(AbstractEnvRunner):
             action, value, state, neglogpac = self.model.step(obs_)
             actions.append(action[0])
             values.append(value[0])
-            states.append(state[0])
+            states.append(state)
             neglogpacs.append(neglogpac[0])
             obss.append(obs)
             dones.append(done)
