@@ -36,7 +36,7 @@ class Runner(AbstractEnvRunner):
             obss.append(obs)
             dones.append(done)
 
-            obs, reward, done, info = self.env.step_env(env_idx, action)
+            obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
                 scores.append(info['r'])
             if 'l' in info.keys() and info['l'] > steps:
