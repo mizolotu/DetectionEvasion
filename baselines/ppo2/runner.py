@@ -25,6 +25,7 @@ class Runner(AbstractEnvRunner):
         steps = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
+            print(env_idx, _)
             obs = tf.constant(obs)
             action, value, state, neglogpac = self.model.step(obs)
             actions.append(action)
