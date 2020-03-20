@@ -79,6 +79,7 @@ def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
                 h = tf.keras.layers.Conv1D(
                     filters=num_outputs, kernel_size=kernel_size, strides=stride,
                     activation='relu', **conv_kwargs)(h)
+                print(tf.shape(h))
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
     return network_fn
