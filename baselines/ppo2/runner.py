@@ -23,6 +23,8 @@ class Runner(AbstractEnvRunner):
     def run_env(self, env_idx, obs, done, q):
         scores = []
         steps = 0
+        cum_rew = 0
+        cum_rew_max = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]))
@@ -38,10 +40,15 @@ class Runner(AbstractEnvRunner):
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
                 scores.append(info['r'])
+                cum_rew += info['r']
+            if cum_rew > cum_rew_max:
+                cum_rew_max = cum_rew
+            if done:
+                cum_rew = 0
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
-        epinfos = {'r': np.mean(scores), 'l': steps}
+        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max}
         q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
