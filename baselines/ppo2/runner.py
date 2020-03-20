@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from baselines.common.runners import AbstractEnvRunner
 from threading import Thread
+from queue import Queue
 
 class Runner(AbstractEnvRunner):
     """
@@ -19,8 +20,7 @@ class Runner(AbstractEnvRunner):
         # Discount rate
         self.gamma = gamma
 
-    def run_env(self, env_idx, obs, states, done, q):
-        epinfos = []
+    def run_env(self, env_idx, obs, done, q):
         scores = []
         steps = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
@@ -40,50 +40,34 @@ class Runner(AbstractEnvRunner):
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
-        epinfos.append({'r': np.mean(scores), 'l': steps})
-        q.put([])
+        epinfos = {'r': np.mean(scores), 'l': steps}
+        q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
+
         # Here, we init the lists that will contain the mb of experiences
+
         mb_obs, mb_rewards, mb_actions, mb_values, mb_dones, mb_neglogpacs = [],[],[],[],[],[]
         mb_states = self.states
         epinfos = []
-        scores = [[] for _ in range(self.env.num_envs)]
-        steps = [0 for _ in range(self.env.num_envs)]
-        # For n in range number of steps
-        for _ in range(self.nsteps):
 
-            # Given observations, get action value and neglopacs
-            # We already have self.obs because Runner superclass run self.obs[:] = env.reset() on init
-            actions, values, self.states, neglogpacs = [], [], [], []
-            for env_i in range(self.env.num_envs):
-                obs = tf.constant(self.obs[env_i:env_i+1])
-                action, value, state, neglogpac = self.model.step(obs)
-                actions.append(action)
-                values.append(value)
-                self.states.append(state)
-                neglogpacs.append(neglogpac)
-            #actions = actions._numpy()
-            actions = np.vstack(actions)
-            mb_obs.append(self.obs.copy())
-            mb_actions.append(actions)
-            #mb_values.append(values._numpy())
-            mb_values.append(np.hstack(values))
-            #mb_neglogpacs.append(neglogpacs._numpy())
-            mb_neglogpacs.append(np.hstack(neglogpacs))
-            mb_dones.append(self.dones)
+        thrs = []
+        q = Queue()
+        for env_i in range(self.env.num_envs):
+            thrs.append(Thread(target=self.run_env, args=(env_i, self.obs[env_i], self.dones[env_i], q), daemon=True))
+            thrs[env_i].start()
+        for env_i in range(self.env.num_envs):
+            thrs[env_i].join()
 
-            # Take actions in env and look the results
-            # Infos contains a ton of useful informations
-            self.obs[:], rewards, self.dones, infos = self.env.step(actions)
-            for i in range(len(infos)):
-                if 'r' in infos[i].keys():
-                    scores[i].append(infos[i]['r'])
-                if 'l' in infos[i].keys() and infos[i]['l'] > steps[i]:
-                    steps[i] = infos[i]['l']
-            mb_rewards.append(rewards)
         for i in range(self.env.num_envs):
-            epinfos.append({'r': np.mean(scores[i]), 'l': steps[i]})
+            obs, actions, values, states, neglogpacs, rewards, dones, epinfos = q.get()
+            mb_obs.append(obs)
+            mb_actions.append(actions)
+            mb_values.append(values)
+            mb_neglogpacs.append(neglogpacs)
+            mb_rewards.append(rewards)
+            mb_dones.append(dones)
+            epinfos.append(epinfos)
 
         #batch of steps to batch of rollouts
 
