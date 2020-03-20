@@ -70,13 +70,13 @@ class Runner(AbstractEnvRunner):
             done_list.append(dones)
             epinfos.append(epinfo)
 
-        for _ in range(self.nsteps):
-            mb_obs.append([item for item in obs_list])
-            mb_actions.append([item for item in action_list])
-            mb_values.append([item for item in value_list])
-            mb_neglogpacs.append([item for item in neglogpac_list])
-            mb_dones.append([item for item in done_list])
-            mb_rewards.append([item for item in reward_list])
+        for step in range(self.nsteps):
+            mb_obs.append([item[step] for item in obs_list])
+            mb_actions.append([item[step] for item in action_list])
+            mb_values.append([item[step] for item in value_list])
+            mb_neglogpacs.append([item[step] for item in neglogpac_list])
+            mb_dones.append([item[step] for item in done_list])
+            mb_rewards.append([item[step] for item in reward_list])
 
         #batch of steps to batch of rollouts
 
