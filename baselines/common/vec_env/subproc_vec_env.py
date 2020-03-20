@@ -67,6 +67,7 @@ class SubprocVecEnv(VecEnv):
         self.remotes[env_idx].send(('step', action))
         results = self.remotes[env_idx].recv()
         obs, rews, dones, infos = results
+        print(results)
         return _flatten_obs(obs), np.stack(rews), np.stack(dones), infos
 
     def step_async(self, actions):
