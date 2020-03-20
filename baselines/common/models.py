@@ -85,7 +85,7 @@ def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
     return network_fn
 
 @register("conv_only")
-def conv_only(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
+def conv_only(convs=[(32, 8, 4)], **conv_kwargs):
     '''
     convolutions-only net
     Parameters:
