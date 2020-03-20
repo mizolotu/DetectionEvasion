@@ -72,7 +72,7 @@ def cnn(**conv_kwargs):
 def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
-        x_input = tf.keras.Input(shape=input_shape)
+        x_input = tf.keras.Input(shape=input_shape, dtype=tf.float32)
         h = x_input
         with tf.name_scope("convnet"):
             for num_outputs, kernel_size, stride in convs:
