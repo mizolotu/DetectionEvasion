@@ -33,7 +33,7 @@ class Runner(AbstractEnvRunner):
             values.append(value)
             states.append(state)
             neglogpacs.append(neglogpac)
-            obss.append(obs.copy())
+            obss.append(obs)
             dones.append(done)
 
             obs, reward, done, info = self.env.step_env(env_idx, action)
