@@ -145,9 +145,10 @@ class DeEnv(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def _get_obs(self, pkts_needed=None):
+    def _get_obs(self, pkts_needed=None, wait_time=3.0):
+        t_start = time()
         if pkts_needed is not None:
-            while len(self.pkt_list) < pkts_needed:
+            while len(self.pkt_list) < pkts_needed and time() - t_start < wait_time:
                 sleep(0.001)
         obs = np.zeros((self.obs_len, self.n_obs_features))
         for i,p in enumerate(self.pkt_list[::-1]):
