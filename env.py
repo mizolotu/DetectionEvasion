@@ -63,8 +63,6 @@ class DeEnv(gym.Env):
 
     def step(self, action):
 
-        print(action)
-
         # actions
 
         action_std = np.clip((action - self.action_space.low) / (self.action_space.high - self.action_space.low), 0, 1)
