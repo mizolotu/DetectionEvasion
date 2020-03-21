@@ -27,7 +27,7 @@ class Runner(AbstractEnvRunner):
         cum_rew_max = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
-            obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]))
+            obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float64)
             print(obs_)
             action, value, state, neglogpac = self.model.step(obs_)
             actions.append(action[0])
