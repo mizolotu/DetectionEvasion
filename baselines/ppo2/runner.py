@@ -24,6 +24,8 @@ class Runner(AbstractEnvRunner):
         scores = []
         steps = 0
         cum_rew = 0
+        cum_act = []
+        cum_act_max = []
         cum_rew_max = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
@@ -41,14 +43,17 @@ class Runner(AbstractEnvRunner):
             if 'r' in info.keys():
                 scores.append(info['r'])
                 cum_rew += info['r']
+                cum_act.append(np.array(action[0]))
             if cum_rew > cum_rew_max:
                 cum_rew_max = cum_rew
+                cum_act_max = np.mean(cum_act)
             if done:
                 cum_rew = 0
+                cum_act = []
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
-        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max}
+        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max, 'a': cum_act_max}
         q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
