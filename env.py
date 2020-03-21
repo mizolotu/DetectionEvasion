@@ -20,7 +20,7 @@ class DeEnv(gym.Env):
 
         self.obs_len = obs_len
         self.n_obs_features = 12
-        self.n_actions = 3
+        self.n_actions = 5
         self.port = src_port
         self.remote = server
         self.pkt_list = []
@@ -47,6 +47,8 @@ class DeEnv(gym.Env):
 
         self.max_delay = 1
         self.max_pad = 1024
+        self.max_send_buff = 65535
+        self.max_recv_buff = 65535
 
         # actions: break, delay, pad, packet
 
@@ -69,6 +71,8 @@ class DeEnv(gym.Env):
         send_pkt_prob = action_std[0]
         send_pkt_delay = action_std[1] * self.max_delay
         send_pkt_pad = int(action_std[2] * self.max_pad)
+        send_buff = int(action_std[3] * self.max_send_buff)
+        recv_buff = int(action_std[4] * self.max_recv_buff)
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
@@ -78,6 +82,8 @@ class DeEnv(gym.Env):
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
             sleep(send_pkt_delay)
+            self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buff)
+            self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buff)
             try:
                 self.sckt.sendall(pkt.encode('utf-8'))
                 if self.debug:
