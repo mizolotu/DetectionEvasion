@@ -76,6 +76,7 @@ def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
         h = x_input
         with tf.name_scope("convnet"):
             for num_outputs, kernel_size, stride in convs:
+                tf.cast(num_outputs, dtype = tf.float32)
                 h = tf.keras.layers.Conv1D(
                     filters=num_outputs, kernel_size=kernel_size, strides=stride,
                     activation='relu', **conv_kwargs)(h)
