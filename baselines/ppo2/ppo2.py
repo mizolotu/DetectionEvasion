@@ -172,6 +172,7 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
         tnow = time.perf_counter()
         # Calculate the fps (frame per second)
         fps = int(nbatch / (tnow - tstart))
+        print([epinfo['a'] for epinfo in epinfobuf])
         if update % log_interval == 0 or update == 1:
             # Calculates if value function is a good predicator of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
