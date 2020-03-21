@@ -259,6 +259,7 @@ class DeEnv(gym.Env):
         model_score = 0
         model_name = ''
         ckpt_path = ''
+        print(os.listdir(model_dir))
         for sd in os.listdir(model_dir):
             subdir = osp.join(model_dir, sd)
             if osp.isdir(subdir) and sd.startswith(prefix):
