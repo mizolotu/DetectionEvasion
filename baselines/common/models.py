@@ -69,7 +69,7 @@ def cnn(**conv_kwargs):
     return network_fn
 
 @register("conv1d")
-def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
+def conv1d(convs=[(128, 8, 4), (256, 4, 2), (256, 3, 1)], **conv_kwargs):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape, dtype=tf.float32)
