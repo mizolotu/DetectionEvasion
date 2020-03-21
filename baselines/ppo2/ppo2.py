@@ -172,7 +172,6 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
         tnow = time.perf_counter()
         # Calculate the fps (frame per second)
         fps = int(nbatch / (tnow - tstart))
-        print([epinfo['a'] for epinfo in epinfobuf])
         if update % log_interval == 0 or update == 1:
             # Calculates if value function is a good predicator of the returns (ev > 1)
             # or if it's just worse than predicting nothing (ev =< 0)
@@ -185,7 +184,7 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
             logger.logkv('eprewmean', safemean([epinfo['r'] for epinfo in epinfobuf]))
             logger.logkv('eplenmean', safemean([epinfo['l'] for epinfo in epinfobuf]))
             logger.logkv('epcumrewmean', safemean([epinfo['c'] for epinfo in epinfobuf]))
-            logger.logkv('epcumactmean', safemean([epinfo['a'] for epinfo in epinfobuf]))
+            logger.logkv('epcumactmean', listmean([epinfo['a'] for epinfo in epinfobuf]))
             if eval_env is not None:
                 logger.logkv('eval_eprewmean', safemean([epinfo['r'] for epinfo in eval_epinfobuf]) )
                 logger.logkv('eval_eplenmean', safemean([epinfo['l'] for epinfo in eval_epinfobuf]) )
@@ -196,7 +195,21 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
             logger.dumpkvs()
 
     return model
+
 # Avoid division error when calculate the mean (in our case if epinfo is empty returns np.nan, not return an error)
+
+def listmean(l):
+    count = 0
+    mean = None
+    for item in l:
+        if len(item) > 0:
+            count += 1
+            if mean is None:
+                mean = item
+            else:
+                mean += item
+    return mean / count if count > 0 else None
+
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
 
