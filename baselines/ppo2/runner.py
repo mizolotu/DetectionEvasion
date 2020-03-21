@@ -46,7 +46,7 @@ class Runner(AbstractEnvRunner):
                 cum_act.append(np.array(action[0]))
             if cum_rew > cum_rew_max:
                 cum_rew_max = cum_rew
-                cum_act_max = np.mean(cum_act)
+                cum_act_max = np.mean(cum_act, axis=0)
             if done:
                 cum_rew = 0
                 cum_act = []
