@@ -73,7 +73,6 @@ def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
-        x_input = tf.cast(x_input, dtype=tf.float64)
         h = x_input
         h = tf.cast(h, dtype=tf.float64)
         for num_outputs, kernel_size, stride in convs:
