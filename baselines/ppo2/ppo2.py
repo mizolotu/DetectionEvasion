@@ -208,7 +208,7 @@ def listmean(l):
                 mean = item
             else:
                 mean += item
-    return mean / count if count > 0 else None
+    return [int(100*item)/100 for item in (mean / count)] if count > 0 else None
 
 def safemean(xs):
     return np.nan if len(xs) == 0 else np.mean(xs)
