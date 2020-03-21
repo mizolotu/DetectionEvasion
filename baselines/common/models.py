@@ -74,7 +74,7 @@ def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape, dtype=tf.float64)
         h = x_input
-        h = tf.cast(h, dtype=tf.float64)
+        h = tf.cast(h, dtype=tf.float32)
         for num_outputs, kernel_size, stride in convs:
             h = tf.keras.layers.Conv1D(
                 filters=num_outputs, kernel_size=kernel_size, strides=stride,
