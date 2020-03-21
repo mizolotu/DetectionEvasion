@@ -72,16 +72,15 @@ def cnn(**conv_kwargs):
 def conv1d(convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)], **conv_kwargs):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
-        x_input = tf.keras.Input(shape=input_shape, dtype=tf.float32)
+        x_input = tf.keras.Input(shape=input_shape)
         h = x_input
         h = tf.cast(h, dtype=tf.float32)
-        with tf.name_scope("convnet"):
-            for num_outputs, kernel_size, stride in convs:
-                h = tf.keras.layers.Conv1D(
-                    filters=num_outputs, kernel_size=kernel_size, strides=stride,
-                    activation='relu', **conv_kwargs)(h)
-            h = tf.keras.layers.Flatten()(h)
-            h = tf.keras.layers.Dense(units=512, kernel_initializer=ortho_init(np.sqrt(2)), activation='relu')(h)
+        for num_outputs, kernel_size, stride in convs:
+            h = tf.keras.layers.Conv1D(
+                filters=num_outputs, kernel_size=kernel_size, strides=stride,
+                activation='relu', **conv_kwargs)(h)
+        h = tf.keras.layers.Flatten()(h)
+        h = tf.keras.layers.Dense(units=512, kernel_initializer=ortho_init(np.sqrt(2)), activation='relu')(h)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
     return network_fn
