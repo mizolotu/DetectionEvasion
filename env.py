@@ -262,7 +262,7 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             if 'POST' in pkt and ack == True:
                 reward = 1
-        return reward / t_start
+        return reward / (time() - t_start)
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
