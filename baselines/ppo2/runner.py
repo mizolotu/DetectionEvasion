@@ -27,6 +27,7 @@ class Runner(AbstractEnvRunner):
         cum_act = []
         cum_act_max = []
         cum_rew_max = 0
+        cum_time = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float32)
@@ -42,10 +43,11 @@ class Runner(AbstractEnvRunner):
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
                 scores.append(info['r'])
-                cum_rew += info['r']
+                cum_rew += info['r'] * info['t']
+                cum_time += info['t']
                 cum_act.append(np.array(action[0]))
-            if cum_rew > cum_rew_max:
-                cum_rew_max = cum_rew
+            if cum_rew / cum_time > cum_rew_max:
+                cum_rew_max = cum_rew / cum_time
                 cum_act_max = np.mean(cum_act, axis=0)
             if done:
                 cum_rew = 0

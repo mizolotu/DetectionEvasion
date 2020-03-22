@@ -65,6 +65,8 @@ class DeEnv(gym.Env):
 
     def step(self, action):
 
+        t_start = time()
+
         # actions
 
         #action_std = np.clip((action - self.action_space.low) / (self.action_space.high - self.action_space.low), 0, 1)
@@ -105,7 +107,7 @@ class DeEnv(gym.Env):
 
         # reward
 
-        reward = self._calculate_reward(pkt, ack)
+        reward = self._calculate_reward(pkt, ack, t_start)
         self.step_count += 1
 
         # done
@@ -124,7 +126,7 @@ class DeEnv(gym.Env):
         if self.debug:
             print(action, y, reward, done)
 
-        return obs, reward, done, {'r': reward, 'l': self.step_count}
+        return obs, reward, done, {'r': reward, 'l': self.step_count, 't': time() - t_start}
 
     def reset(self):
         self.pkt_list.clear()
@@ -255,12 +257,12 @@ class DeEnv(gym.Env):
             ack = False
         return ack
 
-    def _calculate_reward(self, pkt, ack):
+    def _calculate_reward(self, pkt, ack, t_start):
         reward = 0
         if self.attack == 'bruteforce':
             if 'POST' in pkt and ack == True:
                 reward = 1
-        return reward
+        return reward / t_start
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
