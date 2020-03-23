@@ -83,7 +83,6 @@ class DeEnv(gym.Env):
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
             sleep(send_pkt_delay)
-            self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, send_buff)
             self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buff)
             try:
                 self.sckt.sendall(pkt.encode('utf-8'))
