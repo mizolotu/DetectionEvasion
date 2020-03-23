@@ -43,7 +43,7 @@ class Runner(AbstractEnvRunner):
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
                 scores.append(info['r'])
-                cum_rew += info['r'] * info['t']
+                cum_rew += info['r']
                 cum_time += info['t']
                 cum_act.append(np.array(action[0]))
             if cum_rew > cum_rew_max:

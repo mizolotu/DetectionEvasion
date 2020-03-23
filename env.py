@@ -45,7 +45,7 @@ class DeEnv(gym.Env):
 
         # action params
 
-        self.max_delay = 1
+        self.max_delay = 3.0
         self.max_pad = 1024
         self.max_send_buff = 65535
         self.max_recv_buff = 65535
@@ -69,8 +69,8 @@ class DeEnv(gym.Env):
 
         # actions
 
-        action_std = np.clip((action - self.action_space.low) / (self.action_space.high - self.action_space.low), 0, 1)
-        #action_std = np.clip(np.exp(action), 0, 1)
+        #action_std = np.clip((action - self.action_space.low) / (self.action_space.high - self.action_space.low), 0, 1)
+        action_std = np.clip(np.exp(action), 0, 1)
         send_pkt_prob = action_std[0]
         send_pkt_delay = action_std[1] * self.max_delay
         send_pkt_pad = int(action_std[2] * self.max_pad)
@@ -107,8 +107,9 @@ class DeEnv(gym.Env):
 
         # reward
 
-        reward = self._calculate_reward(pkt, ack, t_start)
+        reward = self._calculate_reward(pkt, ack)
         self.step_count += 1
+        t_elapsed = time() - t_start
 
         # done
 
@@ -126,7 +127,7 @@ class DeEnv(gym.Env):
         if self.debug:
             print(action, y, reward, done)
 
-        return obs, reward, done, {'r': reward, 'l': self.step_count, 't': time() - t_start}
+        return obs, reward, done, {'r': reward, 'l': self.step_count, 't': t_elapsed}
 
     def reset(self):
         self.pkt_list.clear()
@@ -257,12 +258,12 @@ class DeEnv(gym.Env):
             ack = False
         return ack
 
-    def _calculate_reward(self, pkt, ack, t_start):
+    def _calculate_reward(self, pkt, ack):
         reward = 0
         if self.attack == 'bruteforce':
             if 'POST' in pkt and ack == True:
                 reward = 1
-        return reward / (time() - t_start)
+        return reward
 
     def _load_model(self, model_dir, prefix):
         model_score = 0
