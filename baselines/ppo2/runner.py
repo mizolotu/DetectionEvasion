@@ -46,16 +46,18 @@ class Runner(AbstractEnvRunner):
                 cum_rew += info['r'] * info['t']
                 cum_time += info['t']
                 cum_act.append(np.array(action[0]))
-            if cum_rew / cum_time > cum_rew_max:
-                cum_rew_max = cum_rew / cum_time
+            if cum_rew > cum_rew_max:
+                cum_rew_max = cum_rew
+                cum_time_max = cum_time
                 cum_act_max = np.mean(cum_act, axis=0)
             if done:
                 cum_rew = 0
+                cum_time = 0
                 cum_act = []
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
-        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max, 'a': cum_act_max}
+        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max, 'a': cum_act_max, 't': cum_time_max}
         q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
