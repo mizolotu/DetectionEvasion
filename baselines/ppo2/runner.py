@@ -27,6 +27,7 @@ class Runner(AbstractEnvRunner):
         cum_act = []
         cum_act_max = []
         cum_rew_max = 0
+        cum_time_max = 0
         cum_time = 0
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
