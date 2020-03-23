@@ -20,7 +20,7 @@ class DeEnv(gym.Env):
 
         self.obs_len = obs_len
         self.n_obs_features = 12
-        self.n_actions = 5
+        self.n_actions = 4
         self.port = src_port
         self.remote = server
         self.pkt_list = []
@@ -47,7 +47,6 @@ class DeEnv(gym.Env):
 
         self.max_delay = 1.0
         self.max_pad = 1024
-        self.max_send_buff = 65535
         self.max_recv_buff = 65535
 
         # actions: break, delay, pad, packet
@@ -69,13 +68,12 @@ class DeEnv(gym.Env):
 
         # actions
 
-        #action_std = np.clip((action - self.action_space.low) / (self.action_space.high - self.action_space.low), 0, 1)
-        action_std = np.clip(np.exp(action), 0, 1)
+        action_std = (np.clip(action, self.action_space.low, self.action_space.high) - self.action_space.low) / (self.action_space.high - self.action_space.low)
+        #action_std = np.clip(np.exp(action), 0, 1)
         send_pkt_prob = action_std[0]
         send_pkt_delay = action_std[1] * self.max_delay
         send_pkt_pad = int(action_std[2] * self.max_pad)
-        send_buff = int(action_std[3] * self.max_send_buff)
-        recv_buff = int(action_std[4] * self.max_recv_buff)
+        recv_buff = int(action_std[3] * self.max_recv_buff)
 
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
