@@ -68,10 +68,17 @@ def mlp(num_layers=2, num_hidden=256, activation=tf.tanh):
         x_input = tf.keras.Input(shape=input_shape)
         h = x_input
         for i in range(num_layers):
-
-          h = tf.keras.layers.Dense(units=num_hidden, kernel_initializer=ortho_init(np.sqrt(2)),
-                                    name='mlp_fc{}'.format(i), activation=activation)(h)
-
+            if i < num_layers - 1:
+                return_seq = True
+            else:
+                return_seq = False
+            h = tf.keras.layers.LSTM(
+                units=num_hidden,
+                kernel_initializer=ortho_init(np.sqrt(2)),
+                name='lstm_cell{}'.format(i),
+                activation=activation,
+                return_sequences=return_seq
+            )(h)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
 
