@@ -62,7 +62,7 @@ def mlp(num_layers=3, num_hidden=256, activation=tf.tanh):
     return network_fn
 
 @register("lstm")
-def mlp(num_layers=2, num_hidden=256, activation=tf.tanh):
+def mlp(num_layers=1, num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
