@@ -66,7 +66,7 @@ def mlp(num_layers=1, num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
-        h = x_input
+        h = tf.keras.layers.Masking(mask_value=0.,)(x_input)
         for i in range(num_layers):
             if i < num_layers - 1:
                 return_seq = True
