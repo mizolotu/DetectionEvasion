@@ -19,8 +19,10 @@ if __name__ == '__main__':
 
     # envs
 
-    nenvs = 16
+    nenvs = 4
+    nsteps = 100
+    nupdates = 10000
     ports = [12340 + i for i in range(nenvs)]
     env_fns = [create_env(iface, port, (server_ip, 80), '/DVWA-master/login.php', 'bruteforce', 64) for port in ports]
     env = SubprocVecEnv(env_fns)
-    learn_ppo(env=env, network=policy, nsteps=100, total_timesteps=100*16*10000)
+    learn_ppo(env=env, network=policy, nsteps=nsteps, total_timesteps=nsteps*nenvs*nupdates)
