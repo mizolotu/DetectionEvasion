@@ -26,7 +26,7 @@ class Runner(AbstractEnvRunner):
     def run_env(self, env_idx, obs, done, q):
         scores = []
         steps = 0
-        cum_act_max = self.cum_actions[env_idx]
+        cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
         cum_rew_max = self.cum_rew[env_idx]
         cum_time_max = self.cum_time[env_idx]
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
