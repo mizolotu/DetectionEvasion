@@ -40,7 +40,7 @@ class Critic(Model):
 
     @tf.function
     def call(self, obs, actions):
-        obs = tf.Flatten()(obs)
+        obs = tf.keras.layers.Flatten()(obs)
         x = tf.concat([obs, actions], axis=-1) # this assumes observation and action can be concatenated
         x = self.network_builder(x)
         return self.output_layer(x)
