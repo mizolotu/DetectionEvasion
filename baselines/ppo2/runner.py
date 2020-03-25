@@ -19,16 +19,16 @@ class Runner(AbstractEnvRunner):
         self.lam = lam
         # Discount rate
         self.gamma = gamma
+        self.cum_rew = np.zeros(env.num_envs)
+        self.cum_time = np.zeros(env.num_envs)
+        self.cum_actions = [[] for _ in range(env.num_envs)]
 
     def run_env(self, env_idx, obs, done, q):
         scores = []
         steps = 0
-        cum_rew = 0
-        cum_act = []
-        cum_act_max = []
-        cum_rew_max = 0
-        cum_time_max = 0
-        cum_time = 0
+        cum_act_max = self.cum_actions[env_idx]
+        cum_rew_max = self.cum_rew[env_idx]
+        cum_time_max = self.cum_time[env_idx]
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float32)
@@ -44,17 +44,17 @@ class Runner(AbstractEnvRunner):
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             if 'r' in info.keys():
                 scores.append(info['r'])
-                cum_rew += info['r']
-                cum_time += info['t']
-                cum_act.append(np.array(action[0]))
-            if cum_rew > cum_rew_max:
-                cum_rew_max = cum_rew
-                cum_time_max = cum_time
-                cum_act_max = np.mean(cum_act, axis=0)
+                self.cum_rew[env_idx] += info['r']
+                self.cum_time[env_idx] += info['t']
+                self.cum_actions.append(np.array(action[0]))
+            if self.cum_rew[env_idx] > cum_rew_max:
+                cum_rew_max = self.cum_rew[env_idx]
+                cum_time_max = self.cum_time[env_idx]
+                cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
             if done:
-                cum_rew = 0
-                cum_time = 0
-                cum_act = []
+                self.cum_rew[env_idx] = 0
+                self.cum_time[env_idx] = 0
+                self.cum_actions[env_idx] = []
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
