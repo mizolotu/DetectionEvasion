@@ -32,7 +32,7 @@ class Critic(Model):
     def __init__(self, nb_actions, ob_shape, name='critic', network='mlp', **network_kwargs):
         super().__init__(name=name, network=network, **network_kwargs)
         self.layer_norm = True
-        self.network_builder = get_network_builder(network)(**network_kwargs)((ob_shape[0] + nb_actions,))
+        self.network_builder = get_network_builder(network)(**network_kwargs)((ob_shape[0] * ob_shape[1] + nb_actions,))
         self.output_layer = tf.keras.layers.Dense(units=1,
                                                   kernel_initializer=tf.random_uniform_initializer(minval=-3e-3, maxval=3e-3),
                                                   name='output')
