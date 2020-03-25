@@ -188,7 +188,7 @@ class DDPG(tf.Module):
         return action, q, None, None
 
     def store_transition(self, obs0, action, reward, obs1, terminal1):
-        print(reward.dtype)
+        print(reward)
         print(self.reward_scale.dtype)
 
         reward *= self.reward_scale
