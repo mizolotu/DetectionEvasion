@@ -114,6 +114,7 @@ class DDPG(tf.Module):
         if self.critic_l2_reg > 0.:
             critic_reg_vars = []
             for layer in self.critic.network_builder.layers[1:]:
+                print(layer.name)
                 critic_reg_vars.append(layer.kernel)
             for var in critic_reg_vars:
                 logger.info('  regularizing: {}'.format(var.name))
