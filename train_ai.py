@@ -3,6 +3,7 @@ import numpy as np
 
 from baselines.common.vec_env import SubprocVecEnv
 from baselines.ppo2.ppo2 import learn as learn_ppo
+from baselines.ddpg.ddpg import learn as learn_ddpg
 from env import DeEnv
 from time import sleep
 
@@ -15,7 +16,8 @@ if __name__ == '__main__':
 
     iface = sys.argv[1]
     server_ip = sys.argv[2]
-    policy = sys.argv[3]
+    learner = 'learn_{0}'.format(sys.argv[3])
+    policy = sys.argv[4]
 
     # envs
 
@@ -25,4 +27,4 @@ if __name__ == '__main__':
     ports = [12340 + i for i in range(nenvs)]
     env_fns = [create_env(iface, port, (server_ip, 80), '/DVWA-master/login.php', 'bruteforce', 64) for port in ports]
     env = SubprocVecEnv(env_fns)
-    learn_ppo(env=env, network=policy, nsteps=nsteps, total_timesteps=nsteps*nenvs*nupdates)
+    learner(env=env, network=policy, nsteps=nsteps, total_timesteps=nsteps*nenvs*nupdates)

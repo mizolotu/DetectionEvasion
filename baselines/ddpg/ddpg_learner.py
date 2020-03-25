@@ -37,7 +37,7 @@ def reduce_var(x, axis=None, keepdims=False):
 def update_perturbed_actor(actor, perturbed_actor, param_noise_stddev):
 
     for var, perturbed_var in zip(actor.variables, perturbed_actor.variables):
-        if var in actor.perturbable_vars:
+        if 'layer_normalization' not in var.name:
             perturbed_var.assign(var + tf.random.normal(shape=tf.shape(var), mean=0., stddev=param_noise_stddev))
         else:
             perturbed_var.assign(var)
