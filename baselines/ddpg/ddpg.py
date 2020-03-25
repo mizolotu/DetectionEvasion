@@ -23,8 +23,8 @@ def learn(network, env,
           seed=None,
           total_timesteps=None,
           nb_epochs=None, # with default settings, perform 1M steps total
-          nb_epoch_cycles=20,
-          nb_rollout_steps=100,
+          nsteps=20,
+          ncycles=10,
           reward_scale=1.0,
           render=False,
           render_eval=False,
@@ -50,7 +50,7 @@ def learn(network, env,
 
     if total_timesteps is not None:
         assert nb_epochs is None
-        nb_epochs = int(total_timesteps) // (nb_epoch_cycles * nb_rollout_steps)
+        nb_epochs = int(total_timesteps) // (nsteps * ncycles)
     else:
         nb_epochs = 500
 
@@ -133,13 +133,13 @@ def learn(network, env,
     epoch_qs = []
     epoch_episodes = 0
     for epoch in range(nb_epochs):
-        for cycle in range(nb_epoch_cycles):
+        for cycle in range(ncycles):
             # Perform rollouts.
             if nenvs > 1:
                 # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each
                 # of the environments, so resetting here instead
                 agent.reset()
-            for t_rollout in range(nb_rollout_steps):
+            for t_rollout in range(nsteps):
                 # Predict next action.
                 action, q, _, _ = agent.step(tf.constant(obs, dtype=tf.float32), apply_noise=True, compute_Q=True)
                 action, q = action.numpy(), q.numpy()
