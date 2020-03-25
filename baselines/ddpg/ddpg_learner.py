@@ -261,7 +261,8 @@ class DDPG(tf.Module):
                 # Ignore the first input layer.
                 for layer in self.critic.network_builder.layers[1:]:
                     # The original l2_regularizer takes half of sum square.
-                    critic_loss += (self.critic_l2_reg / 2.)* tf.reduce_sum(tf.square(layer.kernel))
+                    if layer.name != 'flatten':
+                        critic_loss += (self.critic_l2_reg / 2.)* tf.reduce_sum(tf.square(layer.kernel))
         critic_grads = tape.gradient(critic_loss, self.critic.trainable_variables)
         if self.clip_norm:
             critic_grads = [tf.clip_by_norm(grad, clip_norm=self.clip_norm) for grad in critic_grads]
