@@ -46,7 +46,7 @@ class Runner(AbstractEnvRunner):
                 scores.append(info['r'])
                 self.cum_rew[env_idx] += info['r']
                 self.cum_time[env_idx] += info['t']
-                self.cum_actions.append(np.array(action[0]))
+                self.cum_actions[env_idx].append(np.array(action[0]))
             if self.cum_rew[env_idx] > cum_rew_max:
                 cum_rew_max = self.cum_rew[env_idx]
                 cum_time_max = self.cum_time[env_idx]
