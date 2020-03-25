@@ -24,7 +24,7 @@ def learn(network, env,
           total_timesteps=None,
           nb_epochs=None, # with default settings, perform 1M steps total
           nsteps=20,
-          ncycles=10,
+          ncycles=4,
           reward_scale=1.0,
           render=False,
           render_eval=False,
