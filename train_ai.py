@@ -19,11 +19,11 @@ if __name__ == '__main__':
     learner = eval('learn_{0}'.format(sys.argv[3]))
     policy = sys.argv[4]
     nenvs = int(sys.argv[5])
+    nupdates = int(sys.argv[6])
 
     # envs
 
     nsteps = 100
-    nupdates = 10000
     ports = [12340 + i for i in range(nenvs)]
     env_fns = [create_env(iface, port, (server_ip, 80), '/DVWA-master/login.php', 'bruteforce', 64) for port in ports]
     env = SubprocVecEnv(env_fns)
