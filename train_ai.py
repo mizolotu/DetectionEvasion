@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     iface = sys.argv[1]
     server_ip = sys.argv[2]
-    learner = 'learn_{0}'.format(sys.argv[3])
+    learner = eval('learn_{0}'.format(sys.argv[3]))
     policy = sys.argv[4]
 
     # envs
