@@ -18,10 +18,10 @@ if __name__ == '__main__':
     server_ip = sys.argv[2]
     learner = eval('learn_{0}'.format(sys.argv[3]))
     policy = sys.argv[4]
+    nenvs = int(sys.argv[5])
 
     # envs
 
-    nenvs = 4
     nsteps = 100
     nupdates = 10000
     ports = [12340 + i for i in range(nenvs)]
