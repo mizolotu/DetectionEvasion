@@ -156,6 +156,7 @@ def learn(network, env,
                 if rank == 0 and render:
                     env.render()
                 episode_reward += r
+                print(episode_reward, done)
                 episode_step += 1
 
                 # Book-keeping.
