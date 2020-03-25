@@ -255,10 +255,10 @@ class DeEnv(gym.Env):
         return ack
 
     def _calculate_reward(self, pkt, ack):
-        reward = 0
+        reward = 0.
         if self.attack == 'bruteforce':
             if 'POST' in pkt and ack == True:
-                reward = 1
+                reward = 1.
         return reward
 
     def _load_model(self, model_dir, prefix):
