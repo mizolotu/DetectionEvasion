@@ -45,8 +45,8 @@ class DeEnv(gym.Env):
 
         # action params
 
-        self.max_delay = 1.0
-        self.max_pad = 1024
+        self.max_delay = 5.0
+        self.max_pad = 65535
         self.max_recv_buff = 65535
 
         # actions: break, delay, pad, packet
@@ -152,27 +152,26 @@ class DeEnv(gym.Env):
     def render(self, mode='human', close=False):
         pass
 
-    def _get_obs(self, pkts_needed=None, wait_time=3.0):
+    def _get_obs(self, pkts_needed=None, wait_time=5.0):
         t_start = time()
         if pkts_needed is not None:
             while len(self.pkt_list) < pkts_needed and time() - t_start < wait_time:
                 sleep(0.001)
         obs = np.zeros((self.obs_len, self.n_obs_features))
-        for i,p in enumerate(self.pkt_list[::-1]):
-            obs[-i-1, 0] = p[0] - self.t_start
-            obs[-i-1, 1] = p[6]
-            obs[-i-1, 2] = p[7]
-            obs[-i-1, 3] = p[9]
-            obs[-i-1, 4] = str(p[8]).count('0')
-            obs[-i-1, 5] = str(p[8]).count('1')
-            obs[-i-1, 6] = str(p[8]).count('2')
-            obs[-i-1, 7] = str(p[8]).count('3')
-            obs[-i-1, 8] = str(p[8]).count('4')
-            obs[-i-1, 9] = str(p[8]).count('5')
-            obs[-i-1, 10] = str(p[8]).count('6')
-            obs[-i-1, 11] = str(p[8]).count('7')
-            if i >= self.obs_len - 1:
-                break
+        pkt_list = self.pkt_list[-self.obs_len:]
+        for i,p in enumerate(pkt_list):
+            obs[i, 0] = p[0] - self.t_start
+            obs[i, 1] = p[6]
+            obs[i, 2] = p[7]
+            obs[i, 3] = p[9]
+            obs[i, 4] = str(p[8]).count('0')
+            obs[i, 5] = str(p[8]).count('1')
+            obs[i, 6] = str(p[8]).count('2')
+            obs[i, 7] = str(p[8]).count('3')
+            obs[i, 8] = str(p[8]).count('4')
+            obs[i, 9] = str(p[8]).count('5')
+            obs[i, 10] = str(p[8]).count('6')
+            obs[i, 11] = str(p[8]).count('7')
         return obs
 
     def _generate_user_agent(self):
