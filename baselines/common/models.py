@@ -67,7 +67,7 @@ def lstm(num_layers=2, num_hidden=256, activation=tf.tanh):
         return network
     return network_fn
 
-@register("bstm")
+@register("blstm")
 def blstm(num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
@@ -133,6 +133,7 @@ def ablstm(num_hidden=256, activation=tf.tanh):
         h = tf.reduce_sum(h, axis=1)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
+    return network_fn
 
 @register("cnn")
 def cnn(**conv_kwargs):
