@@ -24,7 +24,7 @@ def learn(network, env,
           total_timesteps=None,
           nb_epochs=None, # with default settings, perform 1M steps total
           nsteps=20,
-          ncycles=4,
+          ncycles=40,
           reward_scale=1.0,
           render=False,
           render_eval=False,
@@ -121,10 +121,6 @@ def learn(network, env,
     episodes = 0 #scalar
     t = 0 # scalar
 
-    epoch = 0
-
-
-
     start_time = time.time()
 
     epoch_episode_rewards = []
@@ -134,6 +130,7 @@ def learn(network, env,
     epoch_episodes = 0
     for epoch in range(nb_epochs):
         for cycle in range(ncycles):
+            print('Cycle: {0}'.format(cycle))
             # Perform rollouts.
             if nenvs > 1:
                 # if simulating multiple envs in parallel, impossible to reset agent at the end of the episode in each

@@ -19,7 +19,7 @@ def constfn(val):
 
 def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2048, ent_coef=0.0, lr=3e-4,
             vf_coef=0.5,  max_grad_norm=0.5, gamma=0.99, lam=0.95,
-            log_interval=1, nminibatches=4, noptepochs=4, cliprange=0.2,
+            log_interval=10, nminibatches=4, noptepochs=4, cliprange=0.2,
             save_interval=0, load_path=None, model_fn=None, **network_kwargs):
     '''
     Learn policy using PPO algorithm (https://arxiv.org/abs/1707.06347)
@@ -120,7 +120,7 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
     if eval_env is not None:
         eval_runner = Runner(env = eval_env, model = model, nsteps = nsteps, gamma = gamma, lam= lam)
 
-    epinfobuf = deque(maxlen=10*nenvs)
+    epinfobuf = deque(maxlen=log_interval*nenvs)
     if eval_env is not None:
         eval_epinfobuf = deque(maxlen=100)
 
@@ -129,6 +129,7 @@ def learn(*, network, env, total_timesteps, eval_env = None, seed=None, nsteps=2
 
     nupdates = total_timesteps//nbatch
     for update in range(1, nupdates+1):
+        print('Update: {0}'.format(update))
         assert nbatch % nminibatches == 0
         # Start timer
         tstart = time.perf_counter()
@@ -203,7 +204,7 @@ def listmean(l):
     count = 0
     mean = None
     for item in l:
-        if len(item) > 0:
+        if type(item) is list and len(item) > 0:
             count += 1
             if mean is None:
                 mean = item
