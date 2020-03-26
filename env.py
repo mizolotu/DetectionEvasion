@@ -40,8 +40,8 @@ class DeEnv(gym.Env):
         self.attack = attack
         self.label = 0
         self.label_period = 1.0
-        self.label_thr = Thread(target=self._classify, daemon=True)
-        self.label_thr.start()
+        #self.label_thr = Thread(target=self._classify, daemon=True)
+        #self.label_thr.start()
 
         # action params
 
@@ -98,11 +98,15 @@ class DeEnv(gym.Env):
             pkts_req = None
             ack = False
 
-        # observation
+        # obtain an observation
 
         obs = self._get_obs(pkts_req)
 
-        # reward
+        # test against target model
+
+        self._classify(count_max=1)
+
+        # calculate reward
 
         reward = self._calculate_reward(pkt, ack)
         self.step_count += 1
@@ -287,7 +291,8 @@ class DeEnv(gym.Env):
             model.load_weights(ckpt_path)
         return model
 
-    def _classify(self):
+    def _classify(self, count_max=None):
+        count = 0
         while True:
             sleep(self.label_period)
             flow_ids = ['-{0}-{1}-{2}-6'.format(self.port, self.remote[0], self.remote[1])]
@@ -302,3 +307,6 @@ class DeEnv(gym.Env):
                     self.label = np.argmax(p)
                     if self.debug:
                         print('Flow label: {0} ({1}) at {2}'.format(self.label, p, time()))
+            count += 1
+            if count_max is not None and count >= count_max:
+                break

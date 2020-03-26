@@ -30,39 +30,23 @@ def nature_cnn(input_shape, **conv_kwargs):
 
 @register("mlp")
 def mlp(num_layers=3, num_hidden=256, activation=tf.tanh):
-    """
-    Stack of fully-connected layers to be used in a policy / q-function approximator
-
-    Parameters:
-    ----------
-
-    num_layers: int                 number of fully-connected layers (default: 2)
-
-    num_hidden: int                 size of fully-connected layers (default: 64)
-
-    activation:                     activation function (default: tf.tanh)
-
-    Returns:
-    -------
-
-    function that builds fully connected network with a given input tensor / placeholder
-    """
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
         h = tf.keras.layers.Flatten()(x_input)
-        #h = x_input
         for i in range(num_layers):
-          h = tf.keras.layers.Dense(units=num_hidden, kernel_initializer=ortho_init(np.sqrt(2)),
-                                    name='mlp_fc{}'.format(i), activation=activation)(h)
-
+            h = tf.keras.layers.Dense(
+                units=num_hidden,
+                kernel_initializer=ortho_init(np.sqrt(2)),
+                name='mlp_fc{}'.format(i),
+                activation=activation
+            )(h)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
-
     return network_fn
 
 @register("lstm")
-def lstm(num_layers=1, num_hidden=256, activation=tf.tanh):
+def lstm(num_layers=2, num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
@@ -81,11 +65,28 @@ def lstm(num_layers=1, num_hidden=256, activation=tf.tanh):
             )(h)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
+    return network_fn
 
+@register("bstm")
+def blstm(num_hidden=256, activation=tf.tanh):
+    def network_fn(input_shape):
+        print('input shape is {}'.format(input_shape))
+        x_input = tf.keras.Input(shape=input_shape)
+        h = tf.keras.layers.Masking(mask_value=0.,)(x_input)
+        h = tf.keras.layers.Bidirectional(
+            tf.keras.layers.LSTM(
+                units=num_hidden,
+                kernel_initializer=ortho_init(np.sqrt(2)),
+                name='lstm_cell',
+                activation=activation
+            )
+        )(h)
+        network = tf.keras.Model(inputs=[x_input], outputs=[h])
+        return network
     return network_fn
 
 @register("alstm")
-def alstm(num_layers=1, num_hidden=256, activation=tf.tanh):
+def alstm(num_layers=2, num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
@@ -94,7 +95,7 @@ def alstm(num_layers=1, num_hidden=256, activation=tf.tanh):
             out, h, c = tf.keras.layers.LSTM(
                 units=num_hidden,
                 kernel_initializer=ortho_init(np.sqrt(2)),
-                name='lstm_cell{}'.format(i),
+                name='lstm_cell',
                 activation=activation,
                 return_sequences=True,
                 return_state=True
@@ -106,8 +107,32 @@ def alstm(num_layers=1, num_hidden=256, activation=tf.tanh):
         h = tf.reduce_sum(h, axis=1)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
-
     return network_fn
+
+@register("ablstm")
+def ablstm(num_hidden=256, activation=tf.tanh):
+    def network_fn(input_shape):
+        print('input shape is {}'.format(input_shape))
+        x_input = tf.keras.Input(shape=input_shape)
+        h = tf.keras.layers.Masking(mask_value=0.,)(x_input)
+        out, fh, fc, bh, bc = tf.keras.layers.Bidirectional(
+            tf.keras.layers.LSTM(
+                units=num_hidden,
+                kernel_initializer=ortho_init(np.sqrt(2)),
+                name='lstm_cell{}'.format(i),
+                activation=activation,
+                return_sequences=True,
+                return_state=True
+            )
+        )(h)
+        h = tf.keras.layers.Concatenate()([fh, bh])
+        ht = tf.expand_dims(h, 1)
+        score = tf.nn.tanh(tf.keras.layers.Dense(num_hidden)(out) + tf.keras.layers.Dense(num_hidden)(ht))
+        attention_weights = tf.nn.softmax(tf.keras.layers.Dense(1)(score), axis=1)
+        h = attention_weights * out
+        h = tf.reduce_sum(h, axis=1)
+        network = tf.keras.Model(inputs=[x_input], outputs=[h])
+        return network
 
 @register("cnn")
 def cnn(**conv_kwargs):
