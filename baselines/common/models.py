@@ -29,7 +29,7 @@ def nature_cnn(input_shape, **conv_kwargs):
     return network
 
 @register("mlp")
-def mlp(num_layers=3, num_hidden=256, activation=tf.tanh):
+def mlp(num_layers=2, num_hidden=256, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
@@ -76,7 +76,7 @@ def blstm(num_hidden=256, activation=tf.tanh):
         h = tf.keras.layers.Bidirectional(
             tf.keras.layers.LSTM(
                 units=num_hidden,
-                kernel_initializer=ortho_init(np.sqrt(2)),
+                #kernel_initializer=ortho_init(np.sqrt(2)),
                 name='lstm_cell',
                 activation=activation
             )
