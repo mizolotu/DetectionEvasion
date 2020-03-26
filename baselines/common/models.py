@@ -118,7 +118,7 @@ def ablstm(num_hidden=256, activation=tf.tanh):
         out, fh, fc, bh, bc = tf.keras.layers.Bidirectional(
             tf.keras.layers.LSTM(
                 units=num_hidden,
-                kernel_initializer=ortho_init(np.sqrt(2)),
+                #kernel_initializer=ortho_init(np.sqrt(2)),
                 name='lstm_cell',
                 activation=activation,
                 return_sequences=True,
