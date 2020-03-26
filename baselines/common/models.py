@@ -95,7 +95,7 @@ def alstm(num_layers=2, num_hidden=256, activation=tf.tanh):
             out, h, c = tf.keras.layers.LSTM(
                 units=num_hidden,
                 kernel_initializer=ortho_init(np.sqrt(2)),
-                name='lstm_cell',
+                name='lstm_cell{0}'.format(i),
                 activation=activation,
                 return_sequences=True,
                 return_state=True
