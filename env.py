@@ -162,7 +162,7 @@ class DeEnv(gym.Env):
             while len(self.pkt_list) < pkts_needed and time() - t_start < wait_time:
                 sleep(0.001)
                 if time() - t_start >= wait_time:
-                    break
+                    print('too long: {0} {1}'.format(self.port, self.step_count))
         obs = np.zeros((self.obs_len, self.n_obs_features))
         pkt_list = self.pkt_list[-self.obs_len:]
         for i,p in enumerate(pkt_list):
