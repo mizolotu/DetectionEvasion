@@ -78,8 +78,6 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
 
-        t1 = time() - t_start
-
         to_be_done = False
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
@@ -97,7 +95,8 @@ class DeEnv(gym.Env):
                 t_rpl_start = time()
                 ack = self._process_reply()
                 t_rpl_proc = time() - t_rpl_start
-                print('Time to send: {0}, time to process: {1}'.format(t_sent, t_rpl_proc))
+                if self.debug:
+                    print('Time to send: {0}, time to process: {1}'.format(t_sent, t_rpl_proc))
             except Exception as e:
                 pkts_req = None
                 ack = False
@@ -106,21 +105,14 @@ class DeEnv(gym.Env):
             pkts_req = None
             ack = False
 
-        t2 = time() - t_start
-
         # obtain an observation
 
         obs = self._get_obs(pkts_req)
         self.last_step_time = time()
 
-        t3 = time() - t_start
-
         # test against target model
 
         self._classify(count_max=1)
-
-        t4 = time() - t_start
-        print(t1,t2,t3,t4)
 
         # calculate reward
 
@@ -164,7 +156,6 @@ class DeEnv(gym.Env):
                 self.sckt.connect(self.remote)
                 ready = True
             except Exception as e:
-                #print('Socket {0} not ready'.format(self.port))
                 pass
         obs = self._get_obs(3)
         self.last_step_time = time()
@@ -178,8 +169,6 @@ class DeEnv(gym.Env):
         if pkts_needed is not None:
             while len(self.pkt_list) < pkts_needed and time() - t_start < wait_time:
                 sleep(0.001)
-                if time() - t_start >= wait_time:
-                    print('too long: {0} {1}'.format(self.port, self.step_count))
         obs = np.zeros((self.obs_len, self.n_obs_features))
         pkt_list = self.pkt_list[-self.obs_len:]
         for i,p in enumerate(pkt_list):
@@ -195,7 +184,6 @@ class DeEnv(gym.Env):
             obs[i, 9] = str(p[8]).count('5')
             obs[i, 10] = str(p[8]).count('6')
             obs[i, 11] = str(p[8]).count('7')
-        print('get_obs took {0} seconds for {1} pkts'.format(time() - t_start, pkts_needed))
         return obs
 
     def _generate_user_agent(self):
