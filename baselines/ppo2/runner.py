@@ -3,6 +3,7 @@ import tensorflow as tf
 from baselines.common.runners import AbstractEnvRunner
 from threading import Thread
 from queue import Queue
+from time import time
 
 class Runner(AbstractEnvRunner):
     """
@@ -31,8 +32,10 @@ class Runner(AbstractEnvRunner):
         cum_time_max = self.cum_time[env_idx]
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
+            t_start = time()
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float32)
             action, value, state, neglogpac = self.model.step(obs_)
+            t_model = time()- t_start
             actions.append(action[0])
             values.append(value[0])
             states.append(state)
@@ -40,8 +43,10 @@ class Runner(AbstractEnvRunner):
             obss.append(obs)
             dones.append(done)
             self.dones[env_idx] = done
-
+            t_start = time()
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
+            t_env = time() - t_start
+            print('Environment {0}: model step = {1}, env step = {2}'.format(env_idx, t_model, t_env))
             if 'r' in info.keys():
                 scores.append(info['r'])
                 self.cum_rew[env_idx] += info['r']
