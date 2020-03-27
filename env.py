@@ -78,6 +78,8 @@ class DeEnv(gym.Env):
         if self.attack == 'bruteforce':
             pkt = self._generate_bruteforce_packet(send_pkt_pad)
 
+        t1 = time() - t_start
+
         to_be_done = False
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
@@ -104,14 +106,21 @@ class DeEnv(gym.Env):
             pkts_req = None
             ack = False
 
+        t2 = time() - t_start
+
         # obtain an observation
 
         obs = self._get_obs(pkts_req)
         self.last_step_time = time()
 
+        t3 = time() - t_start
+
         # test against target model
 
         self._classify(count_max=1)
+
+        t4 = time() - t_start
+        print(t1,t2,t3,t4)
 
         # calculate reward
 
