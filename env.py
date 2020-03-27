@@ -39,7 +39,7 @@ class DeEnv(gym.Env):
         self.url = url
         self.attack = attack
         self.label = 0
-        self.label_period = 1.0
+        self.label_period = 0.0
         #self.label_thr = Thread(target=self._classify, daemon=True)
         #self.label_thr.start()
 
