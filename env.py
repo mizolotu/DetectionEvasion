@@ -181,6 +181,7 @@ class DeEnv(gym.Env):
             obs[i, 9] = str(p[8]).count('5')
             obs[i, 10] = str(p[8]).count('6')
             obs[i, 11] = str(p[8]).count('7')
+        print('get_obs took {0} seconds'.format(time() - t_start))
         return obs
 
     def _generate_user_agent(self):
