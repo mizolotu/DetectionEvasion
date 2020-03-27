@@ -86,11 +86,16 @@ class DeEnv(gym.Env):
                 sleep(send_pkt_delay - time() + self.last_step_time)
             self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buff)
             try:
+                t_start_send = time()
                 self.sckt.sendall(pkt.encode('utf-8'))
+                t_sent = time() - t_start_send
                 if self.debug:
                     print('PACKET SENT:')
                     print(pkt)
+                t_rpl_start = time()
                 ack = self._process_reply()
+                t_rpl_proc = time() - t_rpl_start
+                print('Time to send: {0}, time to process: {1}'.format(t_sent, t_rpl_proc))
             except Exception as e:
                 pkts_req = None
                 ack = False
