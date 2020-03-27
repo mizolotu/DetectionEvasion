@@ -82,7 +82,8 @@ class DeEnv(gym.Env):
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
-            sleep(send_pkt_delay)
+            if send_pkt_delay > time() - self.last_step_time:
+                sleep(send_pkt_delay - time() + self.last_step_time)
             self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buff)
             try:
                 self.sckt.sendall(pkt.encode('utf-8'))
@@ -101,6 +102,7 @@ class DeEnv(gym.Env):
         # obtain an observation
 
         obs = self._get_obs(pkts_req)
+        self.last_step_time = time()
 
         # test against target model
 
@@ -151,6 +153,7 @@ class DeEnv(gym.Env):
                 #print('Socket {0} not ready'.format(self.port))
                 pass
         obs = self._get_obs(3)
+        self.last_step_time = time()
         return obs
 
     def render(self, mode='human', close=False):
