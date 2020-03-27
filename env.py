@@ -45,7 +45,7 @@ class DeEnv(gym.Env):
 
         # action params
 
-        self.max_delay = 5.0
+        self.max_delay = 1.0
         self.max_pad = 65535
         self.max_recv_buff = 65535
 
