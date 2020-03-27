@@ -46,7 +46,7 @@ class Runner(AbstractEnvRunner):
             t_start = time()
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
             t_env = time() - t_start
-            print('Environment {0}: model step = {1}, env step = {2}'.format(env_idx, t_model, t_env))
+            print('Environment {0}: model step = {1}, env step = {2}, {3}'.format(env_idx, t_model, t_env, info['t']))
             if 'r' in info.keys():
                 scores.append(info['r'])
                 self.cum_rew[env_idx] += info['r']
