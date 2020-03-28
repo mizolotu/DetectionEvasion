@@ -28,8 +28,8 @@ class Runner(AbstractEnvRunner):
         scores = []
         steps = 0
         cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
-        cum_rew_max = self.cum_rew[env_idx]
-        cum_time_max = self.cum_time[env_idx]
+        cum_rew_list = []
+        cum_time_list = []
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float32)
@@ -46,19 +46,17 @@ class Runner(AbstractEnvRunner):
                 scores.append(info['r'])
                 self.cum_rew[env_idx] += info['r']
                 self.cum_time[env_idx] += info['t']
-                self.cum_actions[env_idx].append(np.array(action[0]))
-            if self.cum_rew[env_idx] > cum_rew_max:
-                cum_rew_max = self.cum_rew[env_idx]
-                cum_time_max = self.cum_time[env_idx]
-                cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
             if done:
+                cum_rew_list.append(self.cum_rew[env_idx])
+                cum_time_list.append(self.cum_time[env_idx])
                 self.cum_rew[env_idx] = 0
                 self.cum_time[env_idx] = 0
-                self.cum_actions[env_idx] = []
             if 'l' in info.keys() and info['l'] > steps:
                 steps = info['l']
             rewards.append(reward)
-        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_max, 'a': cum_act_max, 't': cum_time_max}
+        cum_rew_avg = np.mean(cum_rew_list) if len(cum_rew_list) > 0 else self.cum_rew[env_idx]
+        cum_time_avg = np.mean(cum_time_list) if len(cum_time_list) > 0 else self.cum_time[env_idx]
+        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_avg, 'a': cum_act_max, 't': cum_time_avg}
         q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
