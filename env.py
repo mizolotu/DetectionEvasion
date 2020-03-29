@@ -82,8 +82,9 @@ class DeEnv(gym.Env):
         pkts_now = len(self.pkt_list)
         if np.random.rand() < send_pkt_prob:
             pkts_req = pkts_now + 2
-            if send_pkt_delay > time() - self.last_step_time:
-                sleep(send_pkt_delay - time() + self.last_step_time)
+            t_now = time()
+            if send_pkt_delay > t_now - self.last_step_time:
+                sleep(np.maximum(0, send_pkt_delay - t_now + self.last_step_time))
             self.sckt.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, recv_buff)
             try:
                 t_start_send = time()
