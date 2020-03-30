@@ -41,11 +41,7 @@ class Runner(AbstractEnvRunner):
             dones.append(done)
             self.dones[env_idx] = done
             obs, reward, done, info = self.env.step_env(env_idx, action[0])
-            if 'r' in info.keys():
-                scores.append(info['r'])
-                self.cum_rew[env_idx] += info['r']
-                self.cum_time[env_idx] += info['t']
-                self.cum_steps[env_idx] = info['l']
+
             if done:
                 cum_rew_list.append(self.cum_rew[env_idx])
                 cum_time_list.append(self.cum_time[env_idx])
@@ -53,6 +49,13 @@ class Runner(AbstractEnvRunner):
                 self.cum_rew[env_idx] = 0
                 self.cum_time[env_idx] = 0
                 self.cum_steps[env_idx] = 0
+
+            if 'r' in info.keys() and 'l' in info.keys() and 't' in info.keys():
+                scores.append(info['r'])
+                self.cum_rew[env_idx] += info['r']
+                self.cum_time[env_idx] += info['t']
+                self.cum_steps[env_idx] = info['l']
+
             rewards.append(reward)
         cum_rew_avg = np.mean(cum_rew_list) if len(cum_rew_list) > 0 else self.cum_rew[env_idx]
         cum_time_avg = np.mean(cum_time_list) if len(cum_time_list) > 0 else self.cum_time[env_idx]
