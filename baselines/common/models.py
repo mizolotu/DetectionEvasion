@@ -87,25 +87,31 @@ def blstm(num_hidden=256, activation=tf.tanh):
     return network_fn
 
 @register("alstm")
-def alstm(num_layers=2, num_hidden=256, activation=tf.tanh):
+def alstm(lstm_cells=64, num_layers=2, num_hidden=512, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
         h = tf.keras.layers.Masking(mask_value=0.,)(x_input)
+        out, h, c = tf.keras.layers.LSTM(
+            units=num_hidden,
+            kernel_initializer=ortho_init(np.sqrt(2)),
+            name='lstm_cell',
+            activation=tf.nn.relu,
+            return_sequences=True,
+            return_state=True
+        )(h)
+        ht = tf.expand_dims(h, 1)
+        score = tf.nn.tanh(tf.keras.layers.Dense(num_hidden)(out) + tf.keras.layers.Dense(num_hidden)(ht))
+        attention_weights = tf.nn.softmax(tf.keras.layers.Dense(1)(score), axis=1)
+        h = attention_weights * out
+        h = tf.reduce_sum(h, axis=1)
         for i in range(num_layers):
-            out, h, c = tf.keras.layers.LSTM(
+            h = tf.keras.layers.Dense(
                 units=num_hidden,
                 kernel_initializer=ortho_init(np.sqrt(2)),
-                name='lstm_cell{0}'.format(i),
-                activation=activation,
-                return_sequences=True,
-                return_state=True
+                name='mlp_fc{}'.format(i),
+                activation=activation
             )(h)
-            ht = tf.expand_dims(h, 1)
-            score = tf.nn.tanh(tf.keras.layers.Dense(num_hidden)(out) + tf.keras.layers.Dense(num_hidden)(ht))
-            attention_weights = tf.nn.softmax(tf.keras.layers.Dense(1)(score), axis=1)
-            h = attention_weights * out
-        h = tf.reduce_sum(h, axis=1)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
     return network_fn
