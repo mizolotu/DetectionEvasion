@@ -119,6 +119,7 @@ class DeEnv(gym.Env):
 
         reward = self._calculate_reward(pkt, ack)
         self.step_count += 1
+        step_count = self.step_count
         t_elapsed = time() - t_start
 
         # done
@@ -137,7 +138,7 @@ class DeEnv(gym.Env):
         if self.debug:
             print(action, y, reward, done)
 
-        return obs, reward, done, {'r': reward, 'l': self.step_count, 't': t_elapsed}
+        return obs, reward, done, {'r': reward, 'l': step_count, 't': t_elapsed}
 
     def reset(self):
         self.pkt_list.clear()
