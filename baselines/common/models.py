@@ -46,22 +46,23 @@ def mlp(num_layers=2, num_hidden=512, activation=tf.tanh):
     return network_fn
 
 @register("lstm")
-def lstm(num_layers=2, num_hidden=256, activation=tf.tanh):
+def lstm(num_layers=2, lstm_cells=64, num_hidden=512, activation=tf.tanh):
     def network_fn(input_shape):
         print('input shape is {}'.format(input_shape))
         x_input = tf.keras.Input(shape=input_shape)
         h = tf.keras.layers.Masking(mask_value=0.,)(x_input)
+        h = tf.keras.layers.LSTM(
+            units=lstm_cells,
+            kernel_initializer=ortho_init(np.sqrt(2)),
+            name='lstm_cell',
+            activation=tf.nn.relu,
+        )(h)
         for i in range(num_layers):
-            if i < num_layers - 1:
-                return_seq = True
-            else:
-                return_seq = False
-            h = tf.keras.layers.LSTM(
+            h = tf.keras.layers.Dense(
                 units=num_hidden,
                 kernel_initializer=ortho_init(np.sqrt(2)),
-                name='lstm_cell{}'.format(i),
-                activation=activation,
-                return_sequences=return_seq
+                name='mlp_fc{}'.format(i),
+                activation=activation
             )(h)
         network = tf.keras.Model(inputs=[x_input], outputs=[h])
         return network
