@@ -22,7 +22,7 @@ class Runner(AbstractEnvRunner):
         self.gamma = gamma
         self.cum_rew = np.zeros(env.num_envs)
         self.cum_time = np.zeros(env.num_envs)
-        self.cum_actions = [[] for _ in range(env.num_envs)]
+        self.cum_steps = np.zeros(env.num_envs)
 
     def run_env(self, env_idx, obs, done, q):
         scores = []
@@ -30,6 +30,7 @@ class Runner(AbstractEnvRunner):
         cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
         cum_rew_list = []
         cum_time_list = []
+        cum_step_list = []
         obss, actions, values, states, neglogpacs, rewards, dones = [], [], [], [], [], [], []
         for _ in range(self.nsteps):
             obs_ = tf.constant(obs.reshape(1, obs.shape[0], obs.shape[1]), dtype=tf.float32)
@@ -46,17 +47,19 @@ class Runner(AbstractEnvRunner):
                 scores.append(info['r'])
                 self.cum_rew[env_idx] += info['r']
                 self.cum_time[env_idx] += info['t']
+                self.cum_steps[env_idx] = info['l']
             if done:
                 cum_rew_list.append(self.cum_rew[env_idx])
                 cum_time_list.append(self.cum_time[env_idx])
+                cum_step_list.append(self.cum_steps[env_idx])
                 self.cum_rew[env_idx] = 0
                 self.cum_time[env_idx] = 0
-            if 'l' in info.keys() and info['l'] > steps:
-                steps = info['l']
+                self.cum_steps[env_idx] = 0
             rewards.append(reward)
         cum_rew_avg = np.mean(cum_rew_list) if len(cum_rew_list) > 0 else self.cum_rew[env_idx]
         cum_time_avg = np.mean(cum_time_list) if len(cum_time_list) > 0 else self.cum_time[env_idx]
-        epinfos = {'r': np.mean(scores), 'l': steps, 'c': cum_rew_avg, 'a': cum_act_max, 't': cum_time_avg}
+        cum_steps_avg = np.mean(cum_step_list) if len(cum_step_list) > 0 else self.cum_steps[env_idx]
+        epinfos = {'r': np.mean(scores), 'L': cum_steps_avg, 'R': cum_rew_avg, 'T': cum_time_avg}
         q.put((obss, actions, values, states, neglogpacs, rewards, dones, epinfos))
 
     def run(self):
