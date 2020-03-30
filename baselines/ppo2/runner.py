@@ -26,8 +26,6 @@ class Runner(AbstractEnvRunner):
 
     def run_env(self, env_idx, obs, done, q):
         scores = []
-        steps = 0
-        cum_act_max = np.mean(self.cum_actions[env_idx], axis=0)
         cum_rew_list = []
         cum_time_list = []
         cum_step_list = []
