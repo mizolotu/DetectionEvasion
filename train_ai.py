@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     # envs
 
-    nsteps = 100
+    nsteps = 200
     ports = [12340 + i for i in range(nenvs)]
     env_fns = [create_env(iface, port, (server_ip, 80), '/DVWA-master/login.php', 'bruteforce', 64) for port in ports]
     env = SubprocVecEnv(env_fns)
