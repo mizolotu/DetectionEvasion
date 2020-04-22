@@ -1432,7 +1432,9 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
 
     # detailed flows (after each PSH-ACK tuple)
 
+    print('Before: {0}'.format(len(flow_ids)))
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
+    print('After: {0}'.format(len(flow_ids)))
 
     features = []
 
