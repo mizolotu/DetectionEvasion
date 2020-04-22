@@ -1418,6 +1418,10 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions):
                 pkt_lists_.append(pkt_list[:i+1])
                 pkt_flags_.append(pkt_flag_list[:i+1])
                 pkt_directions_.append(pkt_dirs[:i+1])
+        flow_ids_.append(flow_id)
+        pkt_lists_.append(pkt_list)
+        pkt_flags_.append(pkt_flag_list)
+        pkt_directions_.append(pkt_dirs)
 
     return flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_
 
@@ -1432,10 +1436,8 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
 
     # detailed flows (after each PSH-ACK tuple)
 
-    print('Before: {0}'.format(len(flow_ids)))
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    print('After: {0}'.format(len(flow_ids)))
-
+    
     features = []
 
     for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
