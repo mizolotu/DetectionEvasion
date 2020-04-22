@@ -3,6 +3,34 @@ import numpy as np
 
 from data_proc import load_dataset
 
+def accuracy(labels, predictions):
+    return len(np.where(labels == predictions)[0]) / len(labels)
+
+def true_positive_rate(labels, predictions, yes=1):
+    tp = np.where((labels == predictions) & (labels == yes))[0]
+    p = np.where(labels == yes)[0]
+    return len(tp) / len(p)
+
+def false_positive_rate(labels, predictions, yes=1):
+    fp = np.where((predictions == yes) & (labels != yes))[0]
+    n = np.where(labels != yes)[0]
+    return len(fp) / len(n)
+
+def precision(labels, predictions, yes=1):
+    tp = np.where((labels == predictions) & (labels == yes))[0]
+    fp = np.where((predictions == yes) & (labels != yes))[0]
+    return len(tp)/(len(tp) + len(fp) + 1e-10)
+
+def recall(labels, predictions, yes=1):
+    tp = np.where((labels == predictions) & (labels == yes))[0]
+    fn = np.where((predictions != yes) & (labels == yes))[0]
+    return len(tp) / (len(tp) + len(fn) + 1e-10)
+
+def f1score(labels, predictions, yes=1):
+    pr = precision(labels, predictions)
+    re = recall(labels, predictions)
+    return (2 * pr * re) / (pr + re + 1e-10)
+
 class IntrusionDetectionAccuracy(tf.keras.metrics.Metric):
 
     def __init__(self, name='intrusion_detection_accuracy', **kwargs):
@@ -27,7 +55,6 @@ class IntrusionDetectionAccuracy(tf.keras.metrics.Metric):
     def reset_states(self):
         self.cc.assign(0.)
         self.tt.assign(0.)
-
 
 def create_model(nfeatures, nlayers, nhidden, ncategories=2, lr=1e-6):
     model = tf.keras.models.Sequential()
@@ -58,7 +85,7 @@ if __name__ == '__main__':
     B_val = Y_val.copy()
     B_te = Y_te.copy()
     for b in [B_tr, B_val, B_te]:
-        b[b > 0] = 1
+        b[np.where(b > 0)[0]] = 1
 
     # test models
 
@@ -76,11 +103,19 @@ if __name__ == '__main__':
                 model.summary()
                 if nn == 2:
                     h = model.fit(X_tr, B_tr, validation_data=(X_val, B_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
-                    results = model.evaluate(X_te, B_te)
+                    predictions = model.predict(X_te)
+                    P_te = np.zeros_like(Y_te)
+                    P_te[np.where(predictions[:, 0] <= predictions[:, 1])[0]] = 1
+                    results = [
+                        accuracy(B_te, P_te),
+                        true_positive_rate(B_te, P_te),
+                        false_positive_rate(B_te, P_te),
+                        precision(B_te, P_te),
+                        f1score(B_te, P_te)
+                    ]
                 else:
-                    h = model.fit(X_tr, Y_tr, validation_data=(X_val, Y_val), epochs=epochs, batch_size=batch_size, verbose=True, callbacks=[tf.keras.callbacks.EarlyStopping(patience=10)])
-                    results = model.evaluate(X_te, Y_te)
+                    pass # TO DO
                 model.save_weights(model_checkpoint_path.format(nl, nh, nn))
-                metrics = ','.join([str(h.history[key][0]) for key in h.history.keys()] + [str(r) for r in results])
+                metrics = [str(r) for r in results]
                 with open(model_stats_file.format(nl, nh, nn), 'w') as f:
                     f.write(metrics)

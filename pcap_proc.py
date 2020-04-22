@@ -1407,6 +1407,20 @@ def decode_tcp_flags_value(value):
     positions = '.'.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
+def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions):
+
+    flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_ = [], [], [], []
+
+    for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
+        for i,pkt in enumerate(pkt_list):
+            if '4' in str(pkt_flag_list[i]) and '1' not in str(pkt_flag_list[i]) and pkt_dirs[i] == -1: # ACK without SYN from the server to the client
+                flow_ids_.append(flow_id)
+                pkt_lists_.append(pkt_list[:i+1])
+                pkt_flags_.append(pkt_flag_list[:i+1])
+                pkt_directions_.append(pkt_dirs[:i+1])
+
+    return flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_
+
 def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
 
     # flow id = src_ip-src_port-dst_ip-dst_port-protocol
@@ -1415,6 +1429,10 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
     # 1 - total size
     # 2 - header size
     # 3 - window size
+
+    # detailed flows (after each PSH-ACK tuple)
+
+    flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
 
     features = []
 
