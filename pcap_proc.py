@@ -1408,7 +1408,7 @@ def decode_tcp_flags_value(value):
     positions = '.'.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
-def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=100):
+def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=np.inf):
 
     flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_ = [], [], [], []
 
@@ -1430,7 +1430,7 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=100):
 
     return flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_
 
-def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0, done=0.0):
+def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
 
     # flow id = src_ip-src_port-dst_ip-dst_port-protocol
 
@@ -1438,13 +1438,6 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
     # 1 - total size
     # 2 - header size
     # 3 - window size
-
-    # detailed flows (after each PSH-ACK tuple)
-
-    before = len(flow_ids)
-    tstart = time()
-    flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    print('Done: {0}, difference: {1}, time elapsed: {2}'.format(done, (len(flow_ids) - before) / before, time() - tstart))
 
     features = []
 
@@ -1946,6 +1939,10 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
     flow_pkts_new = []
     flow_pkt_flags_new = []
     flow_dirs_new = []
+    flow_ids_finished = []
+    flow_pkts_finished = []
+    flow_pkt_flags_finished = []
+    flow_dirs_finished = []
     count_stay = 0
     count_tcp = 0
     count_not_tcp = 0
@@ -1954,17 +1951,29 @@ def clean_flow_buffer(flow_ids, flow_pkts, flow_pkt_flags, flow_dirs, current_ti
         flags = ''.join([str(f) for f in ff])
         if (fi.endswith('0') or fi.endswith('17')) and current_time - fp[-1][0] > idle_thr:
             count_not_tcp += 1
+            flow_ids_finished.append(fi)
+            flow_pkts_finished.append(fp)
+            flow_pkt_flags_finished.append(ff)
+            flow_dirs_finished.append(fd)
         elif fi.endswith('6') and ('0' in flags or '2' in flags) and current_time - fp[-1][0] > idle_thr:
             count_tcp += 1
+            flow_ids_finished.append(fi)
+            flow_pkts_finished.append(fp)
+            flow_pkt_flags_finished.append(ff)
+            flow_dirs_finished.append(fd)
         elif current_time - fp[-1][0] > tcp_duration_thr:
             count_time += 1
+            flow_ids_finished.append(fi)
+            flow_pkts_finished.append(fp)
+            flow_pkt_flags_finished.append(ff)
+            flow_dirs_finished.append(fd)
         else:
             count_stay += 1
             flow_ids_new.append(fi)
             flow_pkts_new.append(fp)
             flow_pkt_flags_new.append(ff)
             flow_dirs_new.append(fd)
-    return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, [count_tcp, count_not_tcp, count_time]
+    return flow_ids_new, flow_pkts_new, flow_pkt_flags_new, flow_dirs_new, flow_ids_finished, flow_pkts_finished, flow_pkt_flags_finished, flow_dirs_finished, [count_tcp, count_not_tcp, count_time]
 
 def extract_flows(pkt_file, step=1.0, ports=None):
 
@@ -2003,18 +2012,23 @@ def extract_flows(pkt_file, step=1.0, ports=None):
         # in case of new time window
 
         if pkt[0] > t or i == len(pkts) - 1:
-            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, counts = clean_flow_buffer(
+            tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, finished_flow_ids, finished_flow_packets, finished_flow_pkt_flags, finished_flow_directions, counts = clean_flow_buffer(
                 tracked_flow_ids,
                 tracked_flow_packets,
                 tracked_flow_pkt_flags,
                 tracked_flow_directions,
                 t
             )
+            finished_flow_ids, finished_flow_packets, finished_flow_pkt_flags, finished_flow_directions = detailed_flows(finished_flow_ids, finished_flow_packets, finished_flow_pkt_flags, finished_flow_directions)
+            features_finished = calculate_features(finished_flow_ids, finished_flow_packets, finished_flow_pkt_flags, finished_flow_directions)
+            flows.extend(features_finished)
+            flow_ids.extend(finished_flow_ids)
             features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, done=float(i)/len(pkts))
             flows.extend(features)
             flow_ids.extend(tracked_flow_ids)
             t = int(pkt[0]) + step
             counts_total = [ct + c for ct, c in zip(counts_total, counts)]
+            print('Progress: {0}%'.format(100.0*i/len(pkts)))
 
         # otherwise
 
