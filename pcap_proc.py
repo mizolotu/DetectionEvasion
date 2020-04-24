@@ -2026,7 +2026,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
             flow_ids.extend(tracked_flow_ids)
             t = int(pkt[0]) + step
             counts_total = [ct + c for ct, c in zip(counts_total, counts)]
-            print('Progress: {0}%, # tracked: {1}, # finished: {2}'.format(100.0*i/len(pkts), len(features), len(features_finished)))
+            #print('Progress: {0}%, # tracked: {1}, # finished: {2}'.format(100.0*i/len(pkts), len(features), len(features_finished)))
 
         # otherwise
 
