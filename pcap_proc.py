@@ -1408,7 +1408,7 @@ def decode_tcp_flags_value(value):
     positions = '.'.join([str(i) for i in range(len(b)) if b[i] == '1'])
     return positions
 
-def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=np.inf):
+def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions):
 
     flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_ = [], [], [], []
 
@@ -1421,8 +1421,6 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=np.in
                 pkt_flags_.append(pkt_flag_list[:i+1])
                 pkt_directions_.append(pkt_dirs[:i+1])
                 ack_count += 1
-                if ack_count >= ack_thr:
-                    break
         flow_ids_.append(flow_id)
         pkt_lists_.append(pkt_list)
         pkt_flags_.append(pkt_flag_list)
