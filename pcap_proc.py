@@ -1413,7 +1413,7 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions):
 
     for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
         for i,pkt in enumerate(pkt_list):
-            if '4' in str(pkt_flag_list[i]) and '1' not in str(pkt_flag_list[i]) and pkt_dirs[i] == -1: # ACK without SYN from the server to the client
+            if '4' in str(pkt_flag_list[i]) and '0' not in str(pkt_flag_list[i]) and '1' not in str(pkt_flag_list[i]) and pkt_dirs[i] == -1: # ACK without FIN and SYN from the server to the client
                 flow_ids_.append(flow_id)
                 pkt_lists_.append(pkt_list[:i+1])
                 pkt_flags_.append(pkt_flag_list[:i+1])
@@ -1436,8 +1436,10 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
 
     # detailed flows (after each PSH-ACK tuple)
 
+    print('Before: {0}'.format(len(flow_ids)))
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    
+    print('After: {0}'.format(len(flow_ids)))
+
     features = []
 
     for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
@@ -2088,8 +2090,8 @@ if __name__ == '__main__':
                         break
             else:
                 process_file = True
-            print(i, input_file, process_file)
             if process_file:
+                print(i, input_file)
                 if mode == 'pcaps-packets':
                     results, _ = read_pcap(input_file, ports=ports)
                 elif mode == 'packets-flows':
