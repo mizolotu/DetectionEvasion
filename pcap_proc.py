@@ -2023,7 +2023,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
             features_finished = calculate_features(finished_flow_ids, finished_flow_packets, finished_flow_pkt_flags, finished_flow_directions)
             flows.extend(features_finished)
             flow_ids.extend(finished_flow_ids)
-            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, done=float(i)/len(pkts))
+            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
             flows.extend(features)
             flow_ids.extend(tracked_flow_ids)
             t = int(pkt[0]) + step
