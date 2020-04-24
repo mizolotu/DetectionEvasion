@@ -1444,7 +1444,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
     before = len(flow_ids)
     tstart = time()
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    print('Done: {0}, difference: {1}, time elapsed: {2}'.format(done, (len(flow_ids) - before) / before), time() - tstart)
+    print('Done: {0}, difference: {1}, time elapsed: {2}'.format(done, (len(flow_ids) - before) / before, time() - tstart))
 
     features = []
 
