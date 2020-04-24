@@ -1429,7 +1429,7 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=100):
 
     return flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_
 
-def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0):
+def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=1.0, idle_thr=5.0, done=0.0):
 
     # flow id = src_ip-src_port-dst_ip-dst_port-protocol
 
@@ -1442,7 +1442,7 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
 
     before = len(flow_ids)
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    print('Difference: {0}'.format((len(flow_ids) - before) / before))
+    print('Done: {0}, difference: {0}'.format(done, (len(flow_ids) - before) / before))
 
     features = []
 
@@ -2008,7 +2008,7 @@ def extract_flows(pkt_file, step=1.0, ports=None):
                 tracked_flow_directions,
                 t
             )
-            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions)
+            features = calculate_features(tracked_flow_ids, tracked_flow_packets, tracked_flow_pkt_flags, tracked_flow_directions, done=float(i)/len(pkts))
             flows.extend(features)
             flow_ids.extend(tracked_flow_ids)
             t = int(pkt[0]) + step
