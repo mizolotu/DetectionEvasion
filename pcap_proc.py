@@ -2,6 +2,7 @@ import pcap, os, sys, pickle, pandas
 import os.path as osp
 import numpy as np
 
+from time import  time
 from datetime import datetime
 from enum import Enum
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
@@ -1441,8 +1442,9 @@ def calculate_features(flow_ids, pkt_lists, pkt_flags, pkt_directions, bulk_thr=
     # detailed flows (after each PSH-ACK tuple)
 
     before = len(flow_ids)
+    tstart = time()
     flow_ids, pkt_lists, pkt_flags, pkt_directions = detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions)
-    print('Done: {0}, difference: {1}'.format(done, (len(flow_ids) - before) / before))
+    print('Done: {0}, difference: {1}, time elapsed: {2}'.format(done, (len(flow_ids) - before) / before), time() - tstart)
 
     features = []
 
