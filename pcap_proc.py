@@ -1413,8 +1413,8 @@ def detailed_flows(flow_ids, pkt_lists, pkt_flags, pkt_directions, ack_thr=100):
     flow_ids_, pkt_lists_, pkt_flags_, pkt_directions_ = [], [], [], []
 
     for flow_id, pkt_list, pkt_flag_list, pkt_dirs in zip(flow_ids, pkt_lists, pkt_flags, pkt_directions):
+        ack_count = 0
         for i,pkt in enumerate(pkt_list):
-            ack_count = 0
             if '4' in str(pkt_flag_list[i]) and '0' not in str(pkt_flag_list[i]) and '1' not in str(pkt_flag_list[i]) and pkt_dirs[i] == -1: # ACK without FIN and SYN from the server to the client
                 flow_ids_.append(flow_id)
                 pkt_lists_.append(pkt_list[:i+1])
