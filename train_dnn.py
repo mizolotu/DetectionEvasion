@@ -95,7 +95,7 @@ if __name__ == '__main__':
     n_hidden = [256, 512, 768, 1024]
     n_labels = [2]
     batch_size = 512
-    epochs = 1000
+    epochs = 1
     for nl in n_layers:
         for nh in n_hidden:
             for nn in n_labels:
@@ -118,4 +118,4 @@ if __name__ == '__main__':
                 model.save_weights(model_checkpoint_path.format(nl, nh, nn))
                 metrics = [str(r) for r in results]
                 with open(model_stats_file.format(nl, nh, nn), 'w') as f:
-                    f.write(metrics)
+                    f.write(','.join(metrics))
